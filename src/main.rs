@@ -6,6 +6,7 @@ mod error;
 mod img_source;
 mod scaler;
 mod scheduler;
+mod shader;
 mod source;
 mod video;
 mod wallpaper;
