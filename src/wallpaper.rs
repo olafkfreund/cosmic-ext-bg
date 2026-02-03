@@ -5,7 +5,7 @@ use crate::{CosmicBg, CosmicBgLayer};
 use std::{
     collections::VecDeque,
     fs::{self, File},
-    path::PathBuf,
+    path::{Path, PathBuf},
     time::{Duration, Instant},
 };
 
@@ -16,18 +16,36 @@ use image::{DynamicImage, ImageReader};
 use jxl_oxide::integration::JxlDecoder;
 use notify::{RecommendedWatcher, RecursiveMode, Watcher};
 use rand::{rng, seq::SliceRandom};
-use sctk::reexports::{
-    calloop::{
-        self, RegistrationToken,
-        timer::{TimeoutAction, Timer},
+use sctk::{
+    reexports::{
+        calloop::{
+            self, RegistrationToken,
+            timer::{TimeoutAction, Timer},
+        },
+        client::QueueHandle,
     },
-    client::QueueHandle,
+    shm::slot::CreateBufferError,
 };
+use thiserror::Error;
 use tracing::error;
 use walkdir::WalkDir;
 
 // TODO filter images by whether they seem to match dark / light mode
 // Alternatively only load from light / dark subdirectories given a directory source when this is active
+
+#[derive(Debug, Error)]
+pub enum DrawError {
+    #[error("no source configured for wallpaper")]
+    NoSource,
+    #[error("failed to decode JPEG XL image: {0}")]
+    JpegXlDecode(#[from] eyre::Report),
+    #[error("failed to decode image from {path}: {reason}")]
+    ImageDecode { path: PathBuf, reason: String },
+    #[error("invalid color gradient in config")]
+    InvalidGradient,
+    #[error("failed to create buffer: {0}")]
+    BufferCreation(#[from] CreateBufferError),
+}
 
 #[derive(Debug)]
 pub struct Wallpaper {
@@ -74,6 +92,48 @@ impl Wallpaper {
         wallpaper
     }
 
+    /// Update the wallpaper configuration without full recreation.
+    ///
+    /// This preserves the image cache and only updates changed settings,
+    /// avoiding unnecessary file I/O and memory allocations.
+    pub fn update_config(&mut self, new_entry: Entry) {
+        let rotation_changed = self.entry.rotation_frequency != new_entry.rotation_frequency;
+        let scaling_changed = self.entry.scaling_mode != new_entry.scaling_mode;
+        let source_changed = self.entry.source != new_entry.source;
+
+        tracing::debug!(
+            output = %self.entry.output,
+            rotation_changed,
+            scaling_changed,
+            source_changed,
+            "Updating wallpaper config"
+        );
+
+        // Update the entry
+        self.entry = new_entry;
+
+        // If source changed, reload images (this will be called from apply_backgrounds)
+        if source_changed {
+            self.current_image = None;
+            self.load_images();
+        }
+
+        // Re-register timer if rotation frequency changed
+        if rotation_changed {
+            if let Some(token) = self.timer_token.take() {
+                self.loop_handle.remove(token);
+            }
+            self.register_timer();
+        }
+
+        // Trigger redraw if scaling mode changed
+        if scaling_changed {
+            for layer in &mut self.layers {
+                layer.needs_redraw = true;
+            }
+        }
+    }
+
     pub fn save_state(&self) -> Result<(), cosmic_config::Error> {
         let Some(cur_source) = self.current_source.clone() else {
             return Ok(());
@@ -95,132 +155,157 @@ impl Wallpaper {
         state.write_entry(&state_helper)
     }
 
-    #[allow(clippy::too_many_lines)]
     pub fn draw(&mut self) {
         let start = Instant::now();
         let mut cur_resized_img: Option<DynamicImage> = None;
 
-        for layer in self.layers.iter_mut().filter(|layer| layer.needs_redraw) {
-            let Some(pool) = layer.pool.as_mut() else {
-                continue;
-            };
+        // Use indices to avoid borrow conflicts with self
+        let layer_indices: Vec<usize> = self.layers
+            .iter()
+            .enumerate()
+            .filter(|(_, layer)| layer.needs_redraw)
+            .map(|(idx, _)| idx)
+            .collect();
 
-            let Some(fractional_scale) = layer.fractional_scale else {
-                continue;
-            };
-
-            let Some((width, height)) = layer.size else {
-                continue;
-            };
-
-            let width = width * fractional_scale / 120;
-            let height = height * fractional_scale / 120;
-
-            if cur_resized_img
-                .as_ref()
-                .map_or(true, |img| img.width() != width || img.height() != height)
-            {
-                let Some(source) = self.current_source.as_ref() else {
+        for idx in layer_indices {
+            match self.draw_layer_by_index(idx, &mut cur_resized_img, start) {
+                Ok(()) => {}
+                Err(DrawError::NoSource) => {
                     tracing::info!("No source for wallpaper");
-                    continue;
-                };
-
-                cur_resized_img = match source {
-                    Source::Path(path) => {
-                        if self.current_image.is_none() {
-                            self.current_image = Some(match path.extension() {
-                                Some(ext) if ext == "jxl" => match decode_jpegxl(&path) {
-                                    Ok(image) => image,
-                                    Err(why) => {
-                                        tracing::warn!(
-                                            ?why,
-                                            "jpegl-xl image decode failed: {}",
-                                            path.display()
-                                        );
-                                        continue;
-                                    }
-                                },
-
-                                _ => match ImageReader::open(&path) {
-                                    Ok(img) => {
-                                        match img
-                                            .with_guessed_format()
-                                            .ok()
-                                            .and_then(|f| f.decode().ok())
-                                        {
-                                            Some(img) => img,
-                                            None => {
-                                                tracing::warn!(
-                                                    "could not decode image: {}",
-                                                    path.display()
-                                                );
-                                                continue;
-                                            }
-                                        }
-                                    }
-                                    Err(_) => continue,
-                                },
-                            });
-                        }
-                        let img = self.current_image.as_ref().unwrap();
-
-                        match self.entry.scaling_mode {
-                            ScalingMode::Fit(color) => {
-                                Some(crate::scaler::fit(img, &color, width, height))
-                            }
-
-                            ScalingMode::Zoom => Some(crate::scaler::zoom(img, width, height)),
-
-                            ScalingMode::Stretch => {
-                                Some(crate::scaler::stretch(img, width, height))
-                            }
-                        }
-                    }
-
-                    Source::Color(Color::Single([r, g, b])) => Some(image::DynamicImage::from(
-                        crate::colored::single([*r, *g, *b], width, height),
-                    )),
-
-                    Source::Color(Color::Gradient(gradient)) => {
-                        match crate::colored::gradient(gradient, width, height) {
-                            Ok(buffer) => Some(image::DynamicImage::from(buffer)),
-                            Err(why) => {
-                                tracing::error!(
-                                    ?gradient,
-                                    ?why,
-                                    "color gradient in config is invalid"
-                                );
-                                None
-                            }
-                        }
-                    }
-                };
-            }
-
-            let image = cur_resized_img.as_ref().unwrap();
-            let buffer_result =
-                crate::draw::canvas(pool, image, width as i32, height as i32, width as i32 * 4);
-
-            match buffer_result {
-                Ok(buffer) => {
-                    crate::draw::layer_surface(
-                        layer,
-                        &self.queue_handle,
-                        &buffer,
-                        (width as i32, height as i32),
-                    );
-                    layer.needs_redraw = false;
-
-                    let elapsed = Instant::now().duration_since(start);
-
-                    tracing::debug!(?elapsed, source = ?self.entry.source, "wallpaper draw");
                 }
-
                 Err(why) => {
                     tracing::error!(?why, "wallpaper could not be drawn");
                 }
             }
         }
+    }
+
+    fn draw_layer_by_index(
+        &mut self,
+        layer_idx: usize,
+        cur_resized_img: &mut Option<DynamicImage>,
+        start: Instant,
+    ) -> Result<(), DrawError> {
+        // Calculate dimensions first (immutable borrow)
+        let (width, height) = {
+            let layer = self.layers.get(layer_idx).ok_or(DrawError::NoSource)?;
+            self.calculate_layer_dimensions(layer)?
+        };
+
+        let needs_new_image = cur_resized_img
+            .as_ref()
+            .map_or(true, |img| img.width() != width || img.height() != height);
+
+        if needs_new_image {
+            *cur_resized_img = Some(self.prepare_scaled_image(width, height)?);
+        }
+
+        // Now we can get mutable access to the layer
+        let layer = self.layers.get_mut(layer_idx).ok_or(DrawError::NoSource)?;
+        let pool = layer.pool.as_mut().ok_or(DrawError::NoSource)?;
+
+        let image = cur_resized_img.as_ref().expect("cur_resized_img was just set");
+
+        let buffer = crate::draw::canvas(pool, image, width as i32, height as i32, width as i32 * 4)?;
+
+        crate::draw::layer_surface(
+            layer,
+            &self.queue_handle,
+            &buffer,
+            (width as i32, height as i32),
+        );
+
+        layer.needs_redraw = false;
+
+        let elapsed = Instant::now().duration_since(start);
+        tracing::debug!(?elapsed, source = ?self.entry.source, "wallpaper draw");
+
+        Ok(())
+    }
+
+    fn calculate_layer_dimensions(
+        &self,
+        layer: &CosmicBgLayer,
+    ) -> Result<(u32, u32), DrawError> {
+        let fractional_scale = layer.fractional_scale.ok_or(DrawError::NoSource)?;
+        let (base_width, base_height) = layer.size.ok_or(DrawError::NoSource)?;
+
+        let width = base_width * fractional_scale / 120;
+        let height = base_height * fractional_scale / 120;
+
+        Ok((width, height))
+    }
+
+    fn prepare_scaled_image(&mut self, width: u32, height: u32) -> Result<DynamicImage, DrawError> {
+        // Clone to avoid borrow conflicts when calling methods that mutate self
+        let source = self.current_source.clone().ok_or(DrawError::NoSource)?;
+
+        match source {
+            Source::Path(ref path) => self.scale_image_from_path(path, width, height),
+            Source::Color(Color::Single([r, g, b])) => {
+                Ok(self.generate_solid_color([r, g, b], width, height))
+            }
+            Source::Color(Color::Gradient(ref gradient)) => {
+                self.generate_gradient(gradient, width, height)
+            }
+            Source::Shader(_shader_config) => {
+                // Shader wallpapers are not yet implemented
+                // For now, return a solid black image as placeholder
+                tracing::warn!("Shader wallpapers not yet implemented, using black placeholder");
+                Ok(self.generate_solid_color([0.0, 0.0, 0.0], width, height))
+            }
+        }
+    }
+
+    fn scale_image_from_path(
+        &mut self,
+        path: &Path,
+        width: u32,
+        height: u32,
+    ) -> Result<DynamicImage, DrawError> {
+        if self.current_image.is_none() {
+            self.current_image = Some(self.decode_image(path)?);
+        }
+
+        let img = self.current_image.as_ref().expect("current_image was just set on line 190");
+        Ok(self.apply_scaling_mode(img, width, height))
+    }
+
+    fn decode_image(&self, path: &Path) -> Result<DynamicImage, DrawError> {
+        match path.extension() {
+            Some(ext) if ext == "jxl" => decode_jpegxl(path).map_err(DrawError::from),
+            _ => ImageReader::open(path)
+                .ok()
+                .and_then(|reader| reader.with_guessed_format().ok())
+                .and_then(|reader| reader.decode().ok())
+                .ok_or_else(|| DrawError::ImageDecode {
+                    path: path.to_path_buf(),
+                    reason: "failed to open or decode image".to_string(),
+                }),
+        }
+    }
+
+    fn apply_scaling_mode(&self, img: &DynamicImage, width: u32, height: u32) -> DynamicImage {
+        match self.entry.scaling_mode {
+            ScalingMode::Fit(color) => crate::scaler::fit(img, &color, width, height),
+            ScalingMode::Zoom => crate::scaler::zoom(img, width, height),
+            ScalingMode::Stretch => crate::scaler::stretch(img, width, height),
+        }
+    }
+
+    fn generate_solid_color(&self, color: [f32; 3], width: u32, height: u32) -> DynamicImage {
+        DynamicImage::from(crate::colored::single(color, width, height))
+    }
+
+    fn generate_gradient(
+        &self,
+        gradient: &cosmic_bg_config::Gradient,
+        width: u32,
+        height: u32,
+    ) -> Result<DynamicImage, DrawError> {
+        crate::colored::gradient(gradient, width, height)
+            .map(DynamicImage::from)
+            .map_err(|_| DrawError::InvalidGradient)
     }
 
     pub fn load_images(&mut self) {
@@ -301,6 +386,11 @@ impl Wallpaper {
 
             Source::Color(ref c) => {
                 self.current_source = Some(Source::Color(c.clone()));
+            }
+
+            Source::Shader(ref shader_config) => {
+                // Shader wallpapers don't have image queues
+                self.current_source = Some(Source::Shader(shader_config.clone()));
             }
         };
         if let Err(err) = self.save_state() {

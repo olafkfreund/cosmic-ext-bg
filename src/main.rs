@@ -1,9 +1,17 @@
 // SPDX-License-Identifier: MPL-2.0
 
+mod animated;
+mod cache;
 mod colored;
 mod draw;
+mod error;
 mod img_source;
+mod loader;
 mod scaler;
+mod scheduler;
+mod shader;
+mod source;
+mod video;
 mod wallpaper;
 
 /// Access glibc malloc tunables.
@@ -73,6 +81,21 @@ use tracing::error;
 use tracing_subscriber::prelude::*;
 use wallpaper::Wallpaper;
 
+/// Represents specific configuration changes to enable differential updates
+#[derive(Debug, Clone, PartialEq)]
+enum ConfigChange {
+    /// The wallpaper source (path or color) changed
+    SourceChanged(String),
+    /// The scaling mode changed
+    ScalingModeChanged(String),
+    /// The rotation frequency changed
+    RotationFrequencyChanged(String),
+    /// The filter method changed
+    FilterMethodChanged(String),
+    /// The sampling method changed
+    SamplingMethodChanged(String),
+}
+
 #[derive(Debug)]
 pub struct CosmicBgLayer {
     layer: LayerSurface,
@@ -83,6 +106,31 @@ pub struct CosmicBgLayer {
     needs_redraw: bool,
     size: Option<(u32, u32)>,
     fractional_scale: Option<u32>,
+    transform: wl_output::Transform,
+}
+
+/// Helper function to determine if a transform represents a 90° or 270° rotation
+fn is_rotated_90_or_270(transform: wl_output::Transform) -> bool {
+    matches!(
+        transform,
+        wl_output::Transform::_90
+            | wl_output::Transform::_270
+            | wl_output::Transform::Flipped90
+            | wl_output::Transform::Flipped270
+    )
+}
+
+impl CosmicBgLayer {
+    /// Returns the effective size of the layer, swapping width and height for 90°/270° rotations
+    pub fn effective_size(&self) -> Option<(u32, u32)> {
+        self.size.map(|(w, h)| {
+            if is_rotated_90_or_270(self.transform) {
+                (h, w)
+            } else {
+                (w, h)
+            }
+        })
+    }
 }
 
 #[allow(clippy::too_many_lines)]
@@ -121,7 +169,7 @@ fn main() -> color_eyre::Result<()> {
     let config = match config_context {
         Ok(config_context) => {
             let source = ConfigWatchSource::new(&config_context.0)
-                .expect("failed to create ConfigWatchSource");
+                .map_err(|err| error::WallpaperError::EventLoopSource { details: format!("ConfigWatchSource creation failed: {err}") })?;
 
             let conf_context = config_context.clone();
             event_loop
@@ -189,7 +237,7 @@ fn main() -> color_eyre::Result<()> {
                         );
                     }
                 })
-                .expect("failed to insert config watching source into event loop");
+                .map_err(|_| error::WallpaperError::EventLoopInsert { source_type: "ConfigWatchSource" })?;
 
             Config::load(&config_context).unwrap_or_else(|why| {
                 tracing::error!(?why, "Config file error, falling back to defaults");
@@ -234,10 +282,10 @@ fn main() -> color_eyre::Result<()> {
     let mut bg_state = CosmicBg {
         registry_state: RegistryState::new(&globals),
         output_state: OutputState::new(&globals, &qh),
-        compositor_state: CompositorState::bind(&globals, &qh).unwrap(),
-        shm_state: Shm::bind(&globals, &qh).unwrap(),
-        layer_state: LayerShell::bind(&globals, &qh).unwrap(),
-        viewporter: globals.bind(&qh, 1..=1, ()).unwrap(),
+        compositor_state: CompositorState::bind(&globals, &qh).map_err(|_| error::WallpaperError::WaylandProtocol { protocol: "CompositorState", details: "bind failed".into() })?,
+        shm_state: Shm::bind(&globals, &qh).map_err(|_| error::WallpaperError::WaylandProtocol { protocol: "Shm", details: "bind failed".into() })?,
+        layer_state: LayerShell::bind(&globals, &qh).map_err(|_| error::WallpaperError::WaylandProtocol { protocol: "LayerShell", details: "bind failed".into() })?,
+        viewporter: globals.bind(&qh, 1..=1, ()).map_err(|_| error::WallpaperError::WaylandProtocol { protocol: "WpViewporter", details: "bind failed".into() })?,
         fractional_scale_manager: globals.bind(&qh, 1..=1, ()).ok(),
         qh,
         source_tx,
@@ -356,6 +404,7 @@ impl CosmicBg {
             layer,
             viewport,
             wl_output: output,
+            transform: output_info.transform,
             output_info,
             size: None,
             fractional_scale,
@@ -401,10 +450,33 @@ impl CompositorHandler for CosmicBg {
         &mut self,
         _conn: &Connection,
         _qh: &QueueHandle<Self>,
-        _surface: &wl_surface::WlSurface,
-        _new_transform: wl_output::Transform,
+        surface: &wl_surface::WlSurface,
+        new_transform: wl_output::Transform,
     ) {
-        // TODO
+        // Find the wallpaper containing the surface and update its transform
+        for wallpaper in &mut self.wallpapers {
+            if let Some(layer) = wallpaper
+                .layers
+                .iter_mut()
+                .find(|layer| layer.layer.wl_surface() == surface)
+            {
+                // Only process if transform actually changed
+                if layer.transform != new_transform {
+                    tracing::debug!(
+                        old_transform = ?layer.transform,
+                        new_transform = ?new_transform,
+                        "output transform changed"
+                    );
+
+                    layer.transform = new_transform;
+                    layer.needs_redraw = true;
+
+                    // Trigger a redraw with the new transform
+                    wallpaper.draw();
+                }
+                break;
+            }
+        }
     }
 
     fn surface_enter(

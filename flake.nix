@@ -5,10 +5,7 @@
     nixpkgs.url = "github:NixOS/nixpkgs/nixpkgs-unstable";
     flake-utils.url = "github:numtide/flake-utils";
     nix-filter.url = "github:numtide/nix-filter";
-    crane = {
-      url = "github:ipetkov/crane";
-      inputs.nixpkgs.follows = "nixpkgs";
-    };
+    crane.url = "github:ipetkov/crane";
     fenix = {
       url = "github:nix-community/fenix";
       inputs.nixpkgs.follows = "nixpkgs";
@@ -19,7 +16,8 @@
     flake-utils.lib.eachSystem [ "x86_64-linux" "aarch64-linux" ] (system:
       let
         pkgs = nixpkgs.legacyPackages.${system};
-        craneLib = crane.lib.${system}.overrideToolchain fenix.packages.${system}.stable.toolchain;
+        # Use latest Rust toolchain for 2024 edition support
+        craneLib = (crane.mkLib pkgs).overrideToolchain fenix.packages.${system}.latest.toolchain;
         pkgDef = {
           src = nix-filter.lib.filter {
             root = ./.;
@@ -39,6 +37,15 @@
             wayland
             libxkbcommon
             desktop-file-utils
+            # GStreamer for video wallpaper support
+            gst_all_1.gstreamer
+            gst_all_1.gst-plugins-base
+            gst_all_1.gst-plugins-good
+            gst_all_1.gst-plugins-bad
+            gst_all_1.gst-plugins-ugly
+            gst_all_1.gst-libav
+            # Hardware acceleration support
+            libva
           ];
         };
 
