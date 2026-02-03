@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: MPL-2.0
 
 mod animated;
+mod cache;
 mod colored;
 mod draw;
 mod error;
