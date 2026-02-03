@@ -4,6 +4,7 @@ mod colored;
 mod draw;
 mod error;
 mod img_source;
+mod loader;
 mod scaler;
 mod scheduler;
 mod shader;
