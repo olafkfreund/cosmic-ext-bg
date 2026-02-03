@@ -59,6 +59,12 @@ log_section() {
     echo -e "${CYAN}  $1${NC}"
     echo -e "${CYAN}═══════════════════════════════════════════════════════════${NC}"
     echo ""
+    # Also write section header to log file (without colors)
+    echo "" >> "$LOG_FILE"
+    echo "═══════════════════════════════════════════════════════════" >> "$LOG_FILE"
+    echo "  $1" >> "$LOG_FILE"
+    echo "═══════════════════════════════════════════════════════════" >> "$LOG_FILE"
+    echo "" >> "$LOG_FILE"
 }
 
 wait_for_service() {
@@ -84,6 +90,13 @@ check_dependency() {
         log_info "$name not found"
         return 1
     fi
+}
+
+# Escape path for RON string literal (backslashes and double quotes)
+escape_ron_path() {
+    local path="$1"
+    # Escape backslashes first, then double quotes
+    printf '%s' "$path" | sed 's/\\/\\\\/g; s/"/\\"/g'
 }
 
 #------------------------------------------------------------------------------
@@ -530,6 +543,8 @@ test_service_status() {
 
 set_wallpaper_path() {
     local path="$1"
+    local escaped_path
+    escaped_path="$(escape_ron_path "$path")"
 
     # Write config file in RON format (cosmic-config format)
     local config_dir="${XDG_CONFIG_HOME:-$HOME/.config}/cosmic/$COSMIC_CONFIG_NAME/v1"
@@ -538,7 +553,7 @@ set_wallpaper_path() {
     cat > "$config_dir/all" << EOF
 (
     output: "all",
-    source: Path("$path"),
+    source: Path("$escaped_path"),
     filter_by_theme: false,
     rotation_frequency: 3600,
     filter_method: Lanczos,
@@ -554,6 +569,8 @@ EOF
 set_video_wallpaper() {
     local path="$1"
     local loop_playback="${2:-true}"
+    local escaped_path
+    escaped_path="$(escape_ron_path "$path")"
 
     local config_dir="${XDG_CONFIG_HOME:-$HOME/.config}/cosmic/$COSMIC_CONFIG_NAME/v1"
     mkdir -p "$config_dir"
@@ -562,7 +579,7 @@ set_video_wallpaper() {
 (
     output: "all",
     source: Video((
-        path: "$path",
+        path: "$escaped_path",
         loop_playback: $loop_playback,
         playback_speed: 1.0,
         hw_accel: true,
@@ -580,6 +597,8 @@ EOF
 
 set_animated_wallpaper() {
     local path="$1"
+    local escaped_path
+    escaped_path="$(escape_ron_path "$path")"
 
     local config_dir="${XDG_CONFIG_HOME:-$HOME/.config}/cosmic/$COSMIC_CONFIG_NAME/v1"
     mkdir -p "$config_dir"
@@ -588,7 +607,7 @@ set_animated_wallpaper() {
 (
     output: "all",
     source: Animated((
-        path: "$path",
+        path: "$escaped_path",
         fps_limit: None,
         loop_count: None,
     )),
@@ -606,6 +625,18 @@ EOF
 set_shader_wallpaper() {
     local preset="$1"
 
+    # Validate preset to avoid malformed configuration
+    local safe_preset
+    case "$preset" in
+        Plasma|Waves|Gradient)
+            safe_preset="$preset"
+            ;;
+        *)
+            echo -e "${YELLOW}[WARN]${NC} Invalid shader preset '$preset'; defaulting to Plasma" >&2
+            safe_preset="Plasma"
+            ;;
+    esac
+
     local config_dir="${XDG_CONFIG_HOME:-$HOME/.config}/cosmic/$COSMIC_CONFIG_NAME/v1"
     mkdir -p "$config_dir"
 
@@ -613,7 +644,7 @@ set_shader_wallpaper() {
 (
     output: "all",
     source: Shader((
-        preset: Some($preset),
+        preset: Some($safe_preset),
         custom_path: None,
         fps_limit: 30,
     )),
@@ -631,6 +662,8 @@ EOF
 set_wallpaper_with_scaling() {
     local path="$1"
     local mode="$2"
+    local escaped_path
+    escaped_path="$(escape_ron_path "$path")"
 
     local scaling_mode
     case "$mode" in
@@ -646,7 +679,7 @@ set_wallpaper_with_scaling() {
     cat > "$config_dir/all" << EOF
 (
     output: "all",
-    source: Path("$path"),
+    source: Path("$escaped_path"),
     filter_by_theme: false,
     rotation_frequency: 3600,
     filter_method: Lanczos,
@@ -660,11 +693,25 @@ EOF
 
 check_wallpaper_active() {
     # Check if cosmic-bg is still running and hasn't crashed
-    if pgrep -x "cosmic-bg" > /dev/null; then
-        return 0
-    else
+    if ! pgrep -x "cosmic-bg" > /dev/null; then
         return 1
     fi
+
+    # Verify config file exists and is non-empty
+    local config_dir="${XDG_CONFIG_HOME:-$HOME/.config}/cosmic/$COSMIC_CONFIG_NAME/v1"
+    local config_file="${config_dir}/all"
+    if [ ! -s "$config_file" ]; then
+        return 1
+    fi
+
+    # Check for recent errors in journal (if available)
+    if command -v journalctl >/dev/null 2>&1; then
+        if journalctl --user -u cosmic-bg --since "30 seconds ago" 2>/dev/null | grep -qiE 'error|failed|panic'; then
+            return 1
+        fi
+    fi
+
+    return 0
 }
 
 #------------------------------------------------------------------------------
@@ -820,6 +867,8 @@ main() {
 
     # Cleanup (optional - comment out to keep test assets)
     # cleanup_test_assets
+    echo -e "${YELLOW}Note: Test assets remain in: ${TEST_DIR}${NC}"
+    echo -e "${YELLOW}Uncomment 'cleanup_test_assets' in this script to enable automatic cleanup.${NC}"
 
     # Return exit code based on failures
     [ "$TESTS_FAILED" -eq 0 ]
