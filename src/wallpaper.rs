@@ -92,6 +92,48 @@ impl Wallpaper {
         wallpaper
     }
 
+    /// Update the wallpaper configuration without full recreation.
+    ///
+    /// This preserves the image cache and only updates changed settings,
+    /// avoiding unnecessary file I/O and memory allocations.
+    pub fn update_config(&mut self, new_entry: Entry) {
+        let rotation_changed = self.entry.rotation_frequency != new_entry.rotation_frequency;
+        let scaling_changed = self.entry.scaling_mode != new_entry.scaling_mode;
+        let source_changed = self.entry.source != new_entry.source;
+
+        tracing::debug!(
+            output = %self.entry.output,
+            rotation_changed,
+            scaling_changed,
+            source_changed,
+            "Updating wallpaper config"
+        );
+
+        // Update the entry
+        self.entry = new_entry;
+
+        // If source changed, reload images (this will be called from apply_backgrounds)
+        if source_changed {
+            self.current_image = None;
+            self.load_images();
+        }
+
+        // Re-register timer if rotation frequency changed
+        if rotation_changed {
+            if let Some(token) = self.timer_token.take() {
+                self.loop_handle.remove(token);
+            }
+            self.register_timer();
+        }
+
+        // Trigger redraw if scaling mode changed
+        if scaling_changed {
+            for layer in &mut self.layers {
+                layer.needs_redraw = true;
+            }
+        }
+    }
+
     pub fn save_state(&self) -> Result<(), cosmic_config::Error> {
         let Some(cur_source) = self.current_source.clone() else {
             return Ok(());
