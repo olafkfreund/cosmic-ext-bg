@@ -266,7 +266,7 @@ test_animated_images() {
     # Test animated GIF
     if [ -f "$TEST_DIR/animated-test.gif" ]; then
         log_info "Testing animated GIF wallpaper..."
-        set_wallpaper_path "$TEST_DIR/animated-test.gif"
+        set_animated_wallpaper "$TEST_DIR/animated-test.gif"
         sleep 3  # Give it time to load and animate
 
         if check_wallpaper_active; then
@@ -288,7 +288,7 @@ test_animated_images() {
     # Test WebP (if available)
     if [ -f "$TEST_DIR/animated-test.webp" ]; then
         log_info "Testing animated WebP wallpaper..."
-        set_wallpaper_path "$TEST_DIR/animated-test.webp"
+        set_animated_wallpaper "$TEST_DIR/animated-test.webp"
         sleep 3
 
         if check_wallpaper_active; then
@@ -339,7 +339,7 @@ test_video_wallpapers() {
     # Test video playback
     if [ -f "$TEST_DIR/video-test.mp4" ]; then
         log_info "Testing video wallpaper..."
-        set_wallpaper_path "$TEST_DIR/video-test.mp4"
+        set_video_wallpaper "$TEST_DIR/video-test.mp4" true
         sleep 5  # Give it time to start playback
 
         if check_wallpaper_active; then
@@ -531,28 +531,75 @@ test_service_status() {
 set_wallpaper_path() {
     local path="$1"
 
-    # Try cosmic-config CLI first
-    if command -v cosmic-config &> /dev/null; then
-        cosmic-config set "$COSMIC_CONFIG_NAME" 1 all '{"output":"all","source":{"Path":"'"$path"'"},"filter_by_theme":false,"rotation_frequency":3600,"filter_method":"Lanczos","scaling_mode":"Zoom","sampling_method":"Alphanumeric"}' 2>/dev/null && return 0
-    fi
-
-    # Fallback: write config file directly
+    # Write config file in RON format (cosmic-config format)
     local config_dir="${XDG_CONFIG_HOME:-$HOME/.config}/cosmic/$COSMIC_CONFIG_NAME/v1"
     mkdir -p "$config_dir"
 
     cat > "$config_dir/all" << EOF
-{
-  "output": "all",
-  "source": {"Path": "$path"},
-  "filter_by_theme": false,
-  "rotation_frequency": 3600,
-  "filter_method": "Lanczos",
-  "scaling_mode": "Zoom",
-  "sampling_method": "Alphanumeric"
-}
+(
+    output: "all",
+    source: Path("$path"),
+    filter_by_theme: false,
+    rotation_frequency: 3600,
+    filter_method: Lanczos,
+    scaling_mode: Zoom,
+    sampling_method: Alphanumeric,
+)
 EOF
 
     # Touch the config to trigger a reload
+    touch "$config_dir/all"
+}
+
+set_video_wallpaper() {
+    local path="$1"
+    local loop_playback="${2:-true}"
+
+    local config_dir="${XDG_CONFIG_HOME:-$HOME/.config}/cosmic/$COSMIC_CONFIG_NAME/v1"
+    mkdir -p "$config_dir"
+
+    cat > "$config_dir/all" << EOF
+(
+    output: "all",
+    source: Video((
+        path: "$path",
+        loop_playback: $loop_playback,
+        playback_speed: 1.0,
+        hw_accel: true,
+    )),
+    filter_by_theme: false,
+    rotation_frequency: 3600,
+    filter_method: Lanczos,
+    scaling_mode: Zoom,
+    sampling_method: Alphanumeric,
+)
+EOF
+
+    touch "$config_dir/all"
+}
+
+set_animated_wallpaper() {
+    local path="$1"
+
+    local config_dir="${XDG_CONFIG_HOME:-$HOME/.config}/cosmic/$COSMIC_CONFIG_NAME/v1"
+    mkdir -p "$config_dir"
+
+    cat > "$config_dir/all" << EOF
+(
+    output: "all",
+    source: Animated((
+        path: "$path",
+        fps_limit: None,
+        loop_count: None,
+    )),
+    filter_by_theme: false,
+    rotation_frequency: 3600,
+    filter_method: Lanczos,
+    scaling_mode: Zoom,
+    sampling_method: Alphanumeric,
+)
+EOF
+
     touch "$config_dir/all"
 }
 
@@ -563,15 +610,19 @@ set_shader_wallpaper() {
     mkdir -p "$config_dir"
 
     cat > "$config_dir/all" << EOF
-{
-  "output": "all",
-  "source": {"Shader": {"preset": "$preset", "custom_path": null, "fps_limit": 30}},
-  "filter_by_theme": false,
-  "rotation_frequency": 3600,
-  "filter_method": "Lanczos",
-  "scaling_mode": "Zoom",
-  "sampling_method": "Alphanumeric"
-}
+(
+    output: "all",
+    source: Shader((
+        preset: Some($preset),
+        custom_path: None,
+        fps_limit: 30,
+    )),
+    filter_by_theme: false,
+    rotation_frequency: 3600,
+    filter_method: Lanczos,
+    scaling_mode: Zoom,
+    sampling_method: Alphanumeric,
+)
 EOF
 
     touch "$config_dir/all"
@@ -583,25 +634,25 @@ set_wallpaper_with_scaling() {
 
     local scaling_mode
     case "$mode" in
-        "Zoom")    scaling_mode='"Zoom"' ;;
-        "Fit")     scaling_mode='{"Fit":[0.0,0.0,0.0]}' ;;
-        "Stretch") scaling_mode='"Stretch"' ;;
-        *)         scaling_mode='"Zoom"' ;;
+        "Zoom")    scaling_mode='Zoom' ;;
+        "Fit")     scaling_mode='Fit([0.0, 0.0, 0.0])' ;;
+        "Stretch") scaling_mode='Stretch' ;;
+        *)         scaling_mode='Zoom' ;;
     esac
 
     local config_dir="${XDG_CONFIG_HOME:-$HOME/.config}/cosmic/$COSMIC_CONFIG_NAME/v1"
     mkdir -p "$config_dir"
 
     cat > "$config_dir/all" << EOF
-{
-  "output": "all",
-  "source": {"Path": "$path"},
-  "filter_by_theme": false,
-  "rotation_frequency": 3600,
-  "filter_method": "Lanczos",
-  "scaling_mode": $scaling_mode,
-  "sampling_method": "Alphanumeric"
-}
+(
+    output: "all",
+    source: Path("$path"),
+    filter_by_theme: false,
+    rotation_frequency: 3600,
+    filter_method: Lanczos,
+    scaling_mode: $scaling_mode,
+    sampling_method: Alphanumeric,
+)
 EOF
 
     touch "$config_dir/all"
