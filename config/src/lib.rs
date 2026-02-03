@@ -111,6 +111,49 @@ pub struct Gradient {
     pub radius: f32,
 }
 
+/// GPU shader preset types
+#[derive(Debug, Deserialize, Serialize, Clone, PartialEq, Eq)]
+pub enum ShaderPreset {
+    Plasma,
+    Waves,
+    Gradient,
+}
+
+/// GPU shader configuration
+#[derive(Debug, Deserialize, Serialize, Clone, PartialEq)]
+pub struct ShaderConfig {
+    /// Built-in shader preset (mutually exclusive with custom_path)
+    pub preset: Option<ShaderPreset>,
+    /// Path to custom WGSL shader file (mutually exclusive with preset)
+    pub custom_path: Option<PathBuf>,
+    /// Target frames per second (default: 30)
+    #[serde(default = "default_fps_limit")]
+    pub fps_limit: u32,
+}
+
+fn default_fps_limit() -> u32 {
+    30
+}
+
+impl Default for ShaderConfig {
+    fn default() -> Self {
+        Self {
+            preset: Some(ShaderPreset::Plasma),
+            custom_path: None,
+            fps_limit: 30,
+        }
+    }
+}
+
+impl ShaderConfig {
+    /// Validate that either preset or custom_path is set, but not both
+    #[must_use]
+    pub fn is_valid(&self) -> bool {
+        (self.preset.is_some() && self.custom_path.is_none())
+            || (self.preset.is_none() && self.custom_path.is_some())
+    }
+}
+
 /// The source of a background image.
 #[derive(Debug, Deserialize, Serialize, Clone, PartialEq)]
 pub enum Source {
@@ -118,6 +161,8 @@ pub enum Source {
     Path(PathBuf),
     /// A background color or gradient.
     Color(Color),
+    /// A GPU shader (procedural wallpaper)
+    Shader(ShaderConfig),
 }
 
 impl Entry {

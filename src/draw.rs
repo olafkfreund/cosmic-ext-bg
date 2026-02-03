@@ -47,7 +47,10 @@ pub fn layer_surface(
     buffer: &Buffer,
     buffer_damage: (i32, i32),
 ) {
-    let (width, height) = layer.size.unwrap();
+    let Some((width, height)) = layer.size else {
+        tracing::error!("layer_surface called with no size configured");
+        return;
+    };
 
     let wl_surface = layer.layer.wl_surface();
 
