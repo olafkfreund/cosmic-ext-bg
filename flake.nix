@@ -16,186 +16,191 @@
     let
       supportedSystems = [ "x86_64-linux" "aarch64-linux" ];
     in
-    flake-utils.lib.eachSystem supportedSystems (system:
-      let
-        pkgs = nixpkgs.legacyPackages.${system};
-        # Use latest Rust toolchain for 2024 edition support
-        craneLib = (crane.mkLib pkgs).overrideToolchain fenix.packages.${system}.latest.toolchain;
+    flake-utils.lib.eachSystem supportedSystems
+      (system:
+        let
+          pkgs = nixpkgs.legacyPackages.${system};
+          # Use latest Rust toolchain for 2024 edition support
+          craneLib = (crane.mkLib pkgs).overrideToolchain fenix.packages.${system}.latest.toolchain;
 
-        # Common source filter
-        src = nix-filter.lib.filter {
-          root = ./.;
-          exclude = [
-            ./.gitignore
-            ./flake.nix
-            ./flake.lock
-            ./LICENSE.md
-            ./debian
-            ./nix
-            ./docs
+          # Common source filter
+          src = nix-filter.lib.filter {
+            root = ./.;
+            exclude = [
+              ./.gitignore
+              ./flake.nix
+              ./flake.lock
+              ./LICENSE.md
+              ./debian
+              ./nix
+              ./docs
+            ];
+          };
+
+          # Common build inputs
+          commonBuildInputs = with pkgs; [
+            wayland
+            libxkbcommon
+            desktop-file-utils
+            stdenv.cc.cc.lib
+            # GStreamer for video wallpaper support
+            gst_all_1.gstreamer
+            gst_all_1.gst-plugins-base
+            gst_all_1.gst-plugins-good
+            gst_all_1.gst-plugins-bad
+            gst_all_1.gst-plugins-ugly
+            gst_all_1.gst-libav
+            # Hardware acceleration support
+            libva
+            # wgpu/vulkan for shader support
+            vulkan-loader
+            vulkan-headers
           ];
-        };
 
-        # Common build inputs
-        commonBuildInputs = with pkgs; [
-          wayland
-          libxkbcommon
-          desktop-file-utils
-          stdenv.cc.cc.lib
-          # GStreamer for video wallpaper support
-          gst_all_1.gstreamer
-          gst_all_1.gst-plugins-base
-          gst_all_1.gst-plugins-good
-          gst_all_1.gst-plugins-bad
-          gst_all_1.gst-plugins-ugly
-          gst_all_1.gst-libav
-          # Hardware acceleration support
-          libva
-          # wgpu/vulkan for shader support
-          vulkan-loader
-          vulkan-headers
-        ];
+          # Additional inputs for GUI application
+          guiBuildInputs = with pkgs; [
+            expat
+            fontconfig
+            freetype
+            libGL
+          ];
 
-        # Additional inputs for GUI application
-        guiBuildInputs = with pkgs; [
-          expat
-          fontconfig
-          freetype
-          libGL
-        ];
+          commonRuntimeDeps = with pkgs; [
+            wayland
+            vulkan-loader
+            gst_all_1.gstreamer
+            gst_all_1.gst-plugins-base
+            gst_all_1.gst-plugins-good
+          ];
 
-        commonRuntimeDeps = with pkgs; [
-          wayland
-          vulkan-loader
-          gst_all_1.gstreamer
-          gst_all_1.gst-plugins-base
-          gst_all_1.gst-plugins-good
-        ];
+          guiRuntimeDeps = with pkgs; [
+            libGL
+            fontconfig
+          ];
 
-        guiRuntimeDeps = with pkgs; [
-          libGL
-          fontconfig
-        ];
+          commonNativeBuildInputs = with pkgs; [
+            just
+            pkg-config
+            autoPatchelfHook
+          ];
 
-        commonNativeBuildInputs = with pkgs; [
-          just
-          pkg-config
-          autoPatchelfHook
-        ];
+          # Main cosmic-ext-bg package definition
+          pkgDef = {
+            pname = "cosmic-ext-bg";
+            version = "1.3.0";
+            inherit src;
+            nativeBuildInputs = commonNativeBuildInputs;
+            buildInputs = commonBuildInputs;
+            runtimeDependencies = commonRuntimeDeps;
+          };
 
-        # Main cosmic-ext-bg package definition
-        pkgDef = {
-          pname = "cosmic-ext-bg";
-          version = "1.3.0";
-          inherit src;
-          nativeBuildInputs = commonNativeBuildInputs;
-          buildInputs = commonBuildInputs;
-          runtimeDependencies = commonRuntimeDeps;
-        };
+          cargoArtifacts = craneLib.buildDepsOnly pkgDef;
 
-        cargoArtifacts = craneLib.buildDepsOnly pkgDef;
-
-        # Build cosmic-ext-bg (service) and cosmic-ext-bg-ctl (CLI)
-        cosmic-ext-bg = craneLib.buildPackage (pkgDef // {
-          inherit cargoArtifacts;
-          # Skip tests in sandbox - GStreamer/Wayland not available
-          doCheck = false;
-        });
-
-        # Build cosmic-ext-bg-settings (GUI)
-        cosmic-ext-bg-settings = craneLib.buildPackage (pkgDef // {
-          pname = "cosmic-ext-bg-settings";
-          cargoExtraArgs = "-p cosmic-ext-bg-settings";
-          inherit cargoArtifacts;
-          buildInputs = commonBuildInputs ++ guiBuildInputs;
-          runtimeDependencies = commonRuntimeDeps ++ guiRuntimeDeps;
-          doCheck = false;
-        });
-
-      in {
-        checks = {
-          inherit cosmic-ext-bg cosmic-ext-bg-settings;
-        };
-
-        packages = {
-          default = cosmic-ext-bg.overrideAttrs (oldAttrs: {
-            buildPhase = ''
-              just prefix=$out build-release
-            '';
-            installPhase = ''
-              just prefix=$out install
-              just prefix=$out install-ctl
-            '';
-          });
-          cosmic-ext-bg = self.packages.${system}.default;
-
-          # CLI tool package
-          cosmic-ext-bg-ctl = craneLib.buildPackage (pkgDef // {
-            pname = "cosmic-ext-bg-ctl";
-            cargoExtraArgs = "--bin cosmic-ext-bg-ctl";
+          # Build cosmic-ext-bg (service) and cosmic-ext-bg-ctl (CLI)
+          cosmic-ext-bg = craneLib.buildPackage (pkgDef // {
             inherit cargoArtifacts;
+            # Skip tests in sandbox - GStreamer/Wayland not available
             doCheck = false;
-            installPhase = ''
-              mkdir -p $out/bin
-              cp target/release/cosmic-ext-bg-ctl $out/bin/
-            '';
           });
 
-          # GUI settings application
-          cosmic-ext-bg-settings = cosmic-ext-bg-settings.overrideAttrs (oldAttrs: {
-            installPhase = ''
-              mkdir -p $out/bin
-              cp target/release/cosmic-ext-bg-settings $out/bin/
-            '';
+          # Build cosmic-ext-bg-settings (GUI)
+          cosmic-ext-bg-settings = craneLib.buildPackage (pkgDef // {
+            pname = "cosmic-ext-bg-settings";
+            cargoExtraArgs = "-p cosmic-ext-bg-settings";
+            inherit cargoArtifacts;
+            buildInputs = commonBuildInputs ++ guiBuildInputs;
+            runtimeDependencies = commonRuntimeDeps ++ guiRuntimeDeps;
+            doCheck = false;
           });
-        };
 
-        apps = {
-          default = flake-utils.lib.mkApp {
-            drv = self.packages.${system}.default;
+        in
+        {
+          checks = {
+            inherit cosmic-ext-bg cosmic-ext-bg-settings;
           };
-          cosmic-ext-bg-ctl = flake-utils.lib.mkApp {
-            drv = self.packages.${system}.cosmic-ext-bg-ctl;
+
+          packages = {
+            default = cosmic-ext-bg.overrideAttrs (oldAttrs: {
+              buildPhase = ''
+                just prefix=$out build-release
+              '';
+              installPhase = ''
+                just prefix=$out install
+                just prefix=$out install-ctl
+                # Symlinks for cosmic-session compatibility: it launches 'cosmic-bg' by name
+                ln -s cosmic-ext-bg $out/bin/cosmic-bg
+                ln -s cosmic-ext-bg-ctl $out/bin/cosmic-bg-ctl
+              '';
+            });
+            cosmic-ext-bg = self.packages.${system}.default;
+
+            # CLI tool package
+            cosmic-ext-bg-ctl = craneLib.buildPackage (pkgDef // {
+              pname = "cosmic-ext-bg-ctl";
+              cargoExtraArgs = "--bin cosmic-ext-bg-ctl";
+              inherit cargoArtifacts;
+              doCheck = false;
+              installPhase = ''
+                mkdir -p $out/bin
+                cp target/release/cosmic-ext-bg-ctl $out/bin/
+              '';
+            });
+
+            # GUI settings application
+            cosmic-ext-bg-settings = cosmic-ext-bg-settings.overrideAttrs (oldAttrs: {
+              installPhase = ''
+                mkdir -p $out/bin
+                cp target/release/cosmic-ext-bg-settings $out/bin/
+              '';
+            });
           };
-          cosmic-ext-bg-settings = flake-utils.lib.mkApp {
-            drv = self.packages.${system}.cosmic-ext-bg-settings;
+
+          apps = {
+            default = flake-utils.lib.mkApp {
+              drv = self.packages.${system}.default;
+            };
+            cosmic-ext-bg-ctl = flake-utils.lib.mkApp {
+              drv = self.packages.${system}.cosmic-ext-bg-ctl;
+            };
+            cosmic-ext-bg-settings = flake-utils.lib.mkApp {
+              drv = self.packages.${system}.cosmic-ext-bg-settings;
+            };
           };
-        };
 
-        devShells.default = pkgs.mkShell rec {
-          inputsFrom = builtins.attrValues self.checks.${system};
+          devShells.default = pkgs.mkShell rec {
+            inputsFrom = builtins.attrValues self.checks.${system};
 
-          nativeBuildInputs = [
-            pkgs.just
-            pkgs.pkg-config
-            # Use fenix toolchain components so clippy/rustfmt match the nightly rustc
-            fenix.packages.${system}.latest.rust-analyzer
-            fenix.packages.${system}.latest.clippy
-            fenix.packages.${system}.latest.rustfmt
-          ];
+            nativeBuildInputs = [
+              pkgs.just
+              pkgs.pkg-config
+              # Use fenix toolchain components so clippy/rustfmt match the nightly rustc
+              fenix.packages.${system}.latest.rust-analyzer
+              fenix.packages.${system}.latest.clippy
+              fenix.packages.${system}.latest.rustfmt
+            ];
 
-          LD_LIBRARY_PATH = pkgs.lib.strings.makeLibraryPath (
-            builtins.concatMap (d: d.runtimeDependencies or []) inputsFrom
-            ++ (with pkgs; [
-              wayland
-              vulkan-loader
-              gst_all_1.gstreamer
-              libGL
-              fontconfig
-            ])
-          );
+            LD_LIBRARY_PATH = pkgs.lib.strings.makeLibraryPath (
+              builtins.concatMap (d: d.runtimeDependencies or [ ]) inputsFrom
+              ++ (with pkgs; [
+                wayland
+                vulkan-loader
+                gst_all_1.gstreamer
+                libGL
+                fontconfig
+              ])
+            );
 
-          # GStreamer plugin path for development
-          GST_PLUGIN_SYSTEM_PATH_1_0 = pkgs.lib.makeSearchPathOutput "lib" "lib/gstreamer-1.0" (with pkgs.gst_all_1; [
-            gstreamer
-            gst-plugins-base
-            gst-plugins-good
-            gst-plugins-bad
-            gst-plugins-ugly
-            gst-libav
-          ]);
-        };
-      }) // {
+            # GStreamer plugin path for development
+            GST_PLUGIN_SYSTEM_PATH_1_0 = pkgs.lib.makeSearchPathOutput "lib" "lib/gstreamer-1.0" (with pkgs.gst_all_1; [
+              gstreamer
+              gst-plugins-base
+              gst-plugins-good
+              gst-plugins-bad
+              gst-plugins-ugly
+              gst-libav
+            ]);
+          };
+        }) // {
       # NixOS modules for system integration
       nixosModules = {
         default = import ./nix/module.nix;
