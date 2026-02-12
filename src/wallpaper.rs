@@ -65,6 +65,9 @@ pub struct Wallpaper {
     animated_source: Option<Box<dyn WallpaperSource>>,
     // Timer for animation frames
     animation_timer_token: Option<RegistrationToken>,
+    // Filesystem watcher for live wallpaper directory updates.
+    // Must be stored here to keep the watcher alive for the lifetime of this wallpaper.
+    _watcher: Option<RecommendedWatcher>,
 }
 
 impl std::fmt::Debug for Wallpaper {
@@ -109,6 +112,7 @@ impl Wallpaper {
             timer_token: None,
             animated_source: None,
             animation_timer_token: None,
+            _watcher: None,
             loop_handle,
             queue_handle,
         };
@@ -323,7 +327,7 @@ impl Wallpaper {
             self.current_image = Some(self.decode_image(path)?);
         }
 
-        let img = self.current_image.as_ref().expect("current_image was just set on line 190");
+        let img = self.current_image.as_ref().expect("current_image was set by the is_none check above");
         Ok(self.apply_scaling_mode(img, width, height))
     }
 
@@ -458,15 +462,7 @@ impl Wallpaper {
                 // Video wallpapers don't have image queues
                 self.current_source = Some(Source::Video(video_config.clone()));
 
-                // Create persistent video source with converted config
-                let video_cfg = crate::video::VideoConfig {
-                    path: video_config.path.clone(),
-                    loop_playback: video_config.loop_playback,
-                    playback_speed: video_config.playback_speed,
-                    hw_accel: video_config.hw_accel,
-                };
-
-                match VideoSource::new(video_cfg) {
+                match VideoSource::new(video_config.clone()) {
                     Ok(video_source) => {
                         self.animated_source = Some(Box::new(video_source));
                         self.setup_animation_timer();
@@ -481,14 +477,7 @@ impl Wallpaper {
                 // Animated wallpapers don't have image queues
                 self.current_source = Some(Source::Animated(animated_config.clone()));
 
-                // Create persistent animated source with converted config
-                let anim_cfg = crate::animated::AnimatedConfig {
-                    path: animated_config.path.clone(),
-                    fps_limit: animated_config.fps_limit,
-                    loop_count: animated_config.loop_count,
-                };
-
-                match AnimatedSource::new(anim_cfg) {
+                match AnimatedSource::new(animated_config.clone()) {
                     Ok(animated_source) => {
                         self.animated_source = Some(Box::new(animated_source));
                         self.setup_animation_timer();
@@ -505,8 +494,9 @@ impl Wallpaper {
         self.image_queue = image_queue;
     }
 
-    fn watch_source(&self, tx: calloop::channel::SyncSender<(String, notify::Event)>) {
+    fn watch_source(&mut self, tx: calloop::channel::SyncSender<(String, notify::Event)>) {
         let Source::Path(ref source) = self.entry.source else {
+            self._watcher = None;
             return;
         };
 
@@ -520,18 +510,28 @@ impl Wallpaper {
             notify::Config::default(),
         ) {
             Ok(w) => w,
-            Err(_) => return,
+            Err(why) => {
+                tracing::error!(?why, output = self.entry.output, "failed to create file watcher");
+                self._watcher = None;
+                return;
+            }
         };
 
         tracing::debug!(output = self.entry.output, "watching source");
 
         if let Ok(m) = fs::metadata(source) {
             if m.is_dir() {
-                let _ = watcher.watch(source, RecursiveMode::Recursive);
+                if let Err(why) = watcher.watch(source, RecursiveMode::Recursive) {
+                    tracing::error!(?why, ?source, "failed to watch directory");
+                }
             } else if m.is_file() {
-                let _ = watcher.watch(source, RecursiveMode::NonRecursive);
+                if let Err(why) = watcher.watch(source, RecursiveMode::NonRecursive) {
+                    tracing::error!(?why, ?source, "failed to watch file");
+                }
             }
         }
+
+        self._watcher = Some(watcher);
     }
 
     fn setup_animation_timer(&mut self) {
@@ -545,7 +545,7 @@ impl Wallpaper {
             .animated_source
             .as_ref()
             .map(|source| source.frame_duration())
-            .unwrap_or(Duration::from_millis(33)); // Default to ~30fps
+            .unwrap_or(crate::source::DEFAULT_FRAME_DURATION);
 
         let output = self.entry.output.clone();
 
@@ -577,7 +577,7 @@ impl Wallpaper {
                         .animated_source
                         .as_ref()
                         .map(|source| source.frame_duration())
-                        .unwrap_or(Duration::from_millis(33));
+                        .unwrap_or(crate::source::DEFAULT_FRAME_DURATION);
 
                     TimeoutAction::ToDuration(next_duration)
                 },
@@ -605,6 +605,12 @@ impl Wallpaper {
                         else {
                             return TimeoutAction::Drop; // Drop if no item found for this timer
                         };
+
+                        // Skip rotation when there's only one image — it would
+                        // re-decode and re-draw the same wallpaper.
+                        if item.image_queue.len() <= 1 {
+                            return TimeoutAction::ToDuration(Duration::from_secs(rotation_freq));
+                        }
 
                         while let Some(next) = item.image_queue.pop_front() {
                             item.current_source = Some(Source::Path(next.clone()));

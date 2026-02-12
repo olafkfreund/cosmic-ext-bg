@@ -22,7 +22,7 @@ mod presets {
 
 /// Helper to create GPU-related SourceError::Io instances
 fn gpu_error(kind: std::io::ErrorKind, msg: impl Into<String>) -> SourceError {
-    SourceError::Io(std::io::Error::new(kind, msg.into()))
+    SourceError::io(kind, msg)
 }
 
 /// Uniform buffer data for shaders
@@ -89,8 +89,38 @@ impl ShaderSource {
         })
     }
 
-    /// Load a custom shader from a file path
+    /// Maximum size for custom shader files (64 KB).
+    const MAX_SHADER_SIZE: u64 = 64 * 1024;
+
+    /// Load a custom shader from a file path with validation.
     fn load_custom_shader(path: &Path) -> Result<String, SourceError> {
+        // Validate file extension
+        let ext = path
+            .extension()
+            .and_then(|e| e.to_str())
+            .map(|e| e.to_lowercase());
+        if ext.as_deref() != Some("wgsl") {
+            return Err(gpu_error(
+                std::io::ErrorKind::InvalidInput,
+                format!("Custom shader must be a .wgsl file, got: {}", path.display()),
+            ));
+        }
+
+        // Check file size before reading
+        let metadata = std::fs::metadata(path).map_err(|e| {
+            gpu_error(std::io::ErrorKind::NotFound, format!("Failed to read shader metadata: {}", e))
+        })?;
+        if metadata.len() > Self::MAX_SHADER_SIZE {
+            return Err(gpu_error(
+                std::io::ErrorKind::InvalidData,
+                format!(
+                    "Custom shader too large: {} bytes (max {})",
+                    metadata.len(),
+                    Self::MAX_SHADER_SIZE
+                ),
+            ));
+        }
+
         std::fs::read_to_string(path).map_err(|e| {
             gpu_error(
                 std::io::ErrorKind::NotFound,
@@ -270,17 +300,15 @@ impl ShaderSource {
 
     /// Render a frame and return the image
     fn render_frame(&mut self) -> Result<DynamicImage, SourceError> {
-        let device = self
-            .device
-            .as_ref()
-            .ok_or_else(|| gpu_error(std::io::ErrorKind::NotConnected, "GPU device not initialized"))?;
-        let queue = self.queue.as_ref().unwrap();
-        let pipeline = self.pipeline.as_ref().unwrap();
-        let uniform_buffer = self.uniform_buffer.as_ref().unwrap();
-        let bind_group = self.bind_group.as_ref().unwrap();
-        let output_texture = self.output_texture.as_ref().unwrap();
-        let output_buffer = self.output_buffer.as_ref().unwrap();
-        let (width, height) = self.target_size.unwrap();
+        let not_init = || gpu_error(std::io::ErrorKind::NotConnected, "GPU not initialized");
+        let device = self.device.as_ref().ok_or_else(not_init)?;
+        let queue = self.queue.as_ref().ok_or_else(not_init)?;
+        let pipeline = self.pipeline.as_ref().ok_or_else(not_init)?;
+        let uniform_buffer = self.uniform_buffer.as_ref().ok_or_else(not_init)?;
+        let bind_group = self.bind_group.as_ref().ok_or_else(not_init)?;
+        let output_texture = self.output_texture.as_ref().ok_or_else(not_init)?;
+        let output_buffer = self.output_buffer.as_ref().ok_or_else(not_init)?;
+        let (width, height) = self.target_size.ok_or_else(not_init)?;
 
         // Update uniforms
         let elapsed = self.start_time.elapsed().as_secs_f32();
@@ -350,13 +378,17 @@ impl ShaderSource {
         let buffer_slice = output_buffer.slice(..);
         let (tx, rx) = std::sync::mpsc::channel();
         buffer_slice.map_async(wgpu::MapMode::Read, move |result| {
-            tx.send(result).unwrap();
+            let _ = tx.send(result);
         });
 
         device.poll(wgpu::Maintain::Wait);
-        rx.recv()
-            .unwrap()
-            .map_err(|e| gpu_error(std::io::ErrorKind::Other, format!("Buffer map failed: {}", e)))?;
+        let map_result = rx.recv().map_err(|_| {
+            gpu_error(std::io::ErrorKind::Other, "Buffer map callback channel closed")
+        })?;
+        if let Err(e) = map_result {
+            output_buffer.unmap();
+            return Err(gpu_error(std::io::ErrorKind::Other, format!("Buffer map failed: {}", e)));
+        }
 
         let data = buffer_slice.get_mapped_range();
 
@@ -397,7 +429,7 @@ impl WallpaperSource for ShaderSource {
     }
 
     fn frame_duration(&self) -> Duration {
-        let fps = self.config.fps_limit.max(1);
+        let fps = self.config.clamped_fps();
         let millis_per_frame = 1000u64 / fps as u64;
         Duration::from_millis(millis_per_frame)
     }

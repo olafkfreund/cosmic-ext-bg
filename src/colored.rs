@@ -6,17 +6,7 @@ use image::Rgb32FImage;
 
 /// Generate a background image from a color.
 pub fn single(color: [f32; 3], width: u32, height: u32) -> Rgb32FImage {
-    let mut imgbuf = Rgb32FImage::new(width, height);
-
-    let pixel = image::Rgb(color);
-
-    for x in 0..width {
-        for y in 0..height {
-            imgbuf.put_pixel(x, y, pixel);
-        }
-    }
-
-    imgbuf
+    Rgb32FImage::from_pixel(width, height, image::Rgb(color))
 }
 
 /// Generate a background image from a gradient.
@@ -60,19 +50,23 @@ pub fn gradient(
         90 => Box::new(|x, _y| x as f64 / width),
         180 => Box::new(|_x, y| y as f64 / height),
         270 => Box::new(|x, _y| 1.0 - (x as f64 / width)),
-        _ => Box::new(|x, y| {
+        _ => {
             let (dmin, dmax) = grad.domain();
             let angle = f64::from(gradient.radius.to_radians());
-            let (x, y) = (f64::from(x) - width / SCALE, f64::from(y) - height / SCALE);
+            let cos_a = f64::cos(angle);
+            let sin_a = f64::sin(angle);
+            Box::new(move |x, y| {
+                let (x, y) = (f64::from(x) - width / SCALE, f64::from(y) - height / SCALE);
 
-            remap(
-                x * f64::cos(angle) - y * f64::sin(angle),
-                -width / SCALE,
-                width / SCALE,
-                f64::from(dmin),
-                f64::from(dmax),
-            )
-        }),
+                remap(
+                    x * cos_a - y * sin_a,
+                    -width / SCALE,
+                    width / SCALE,
+                    f64::from(dmin),
+                    f64::from(dmax),
+                )
+            })
+        }
     };
 
     #[allow(clippy::cast_possible_truncation)]

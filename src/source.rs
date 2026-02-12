@@ -17,6 +17,12 @@ use std::{
 };
 use thiserror::Error;
 
+/// Default frame duration (~30 fps) used when no source-specific timing is available.
+pub const DEFAULT_FRAME_DURATION: Duration = Duration::from_millis(33);
+
+/// Fallback resolution when no output dimensions have been configured yet.
+pub const FALLBACK_RESOLUTION: (u32, u32) = (1920, 1080);
+
 /// A single frame to be rendered
 #[derive(Debug)]
 pub struct Frame {
@@ -35,6 +41,13 @@ pub enum SourceError {
     Gradient(String),
     #[error("JPEG XL decode error: {0}")]
     JpegXl(#[from] eyre::Report),
+}
+
+impl SourceError {
+    /// Create an I/O-based source error with the given kind and message.
+    pub fn io(kind: std::io::ErrorKind, msg: impl Into<String>) -> Self {
+        Self::Io(std::io::Error::new(kind, msg.into()))
+    }
 }
 
 /// Trait for extensible wallpaper source types
@@ -169,7 +182,7 @@ impl ColorSource {
 
 impl WallpaperSource for ColorSource {
     fn next_frame(&mut self) -> Result<Frame, SourceError> {
-        let (width, height) = self.size.unwrap_or((1920, 1080));
+        let (width, height) = self.size.unwrap_or(FALLBACK_RESOLUTION);
 
         if self.generated.is_none() {
             self.generated = Some(self.generate_image(width, height)?);
