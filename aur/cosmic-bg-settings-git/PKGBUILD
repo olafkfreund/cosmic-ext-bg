@@ -1,0 +1,59 @@
+# Maintainer: Olaf K. Freund <olaf@olafkfreund.com>
+# https://github.com/olafkfreund/cosmic-bg-ng
+
+pkgname=cosmic-bg-settings-git
+_pkgname=cosmic-bg-ng
+pkgver=1.2.0.r0.g0000000
+pkgrel=1
+pkgdesc='GUI settings application for cosmic-bg-ng wallpaper service'
+arch=('x86_64' 'aarch64')
+url='https://github.com/olafkfreund/cosmic-bg-ng'
+license=('MPL-2.0')
+depends=(
+    'cosmic-bg-ng-git'
+    'wayland'
+    'libxkbcommon'
+    'vulkan-icd-loader'
+    'fontconfig'
+    'freetype2'
+    'libglvnd'
+    'expat'
+)
+makedepends=(
+    'cargo'
+    'git'
+    'just'
+    'pkg-config'
+    'clang'
+    'mold'
+)
+provides=('cosmic-bg-settings')
+conflicts=('cosmic-bg-settings')
+source=("git+${url}.git")
+sha256sums=('SKIP')
+
+pkgver() {
+    cd "${_pkgname}"
+    git describe --long --tags --abbrev=7 2>/dev/null | sed 's/^v//;s/\([^-]*-g\)/r\1/;s/-/./g' ||
+    printf '%s.r%s.g%s' "$(grep '^version' Cargo.toml | head -1 | cut -d'"' -f2)" \
+        "$(git rev-list --count HEAD)" "$(git rev-parse --short=7 HEAD)"
+}
+
+prepare() {
+    cd "${_pkgname}"
+    export RUSTUP_TOOLCHAIN=stable
+    cargo fetch --locked --target "$(rustc -vV | sed -n 's/host: //p')"
+}
+
+build() {
+    cd "${_pkgname}"
+    export RUSTUP_TOOLCHAIN=stable
+    export CARGO_TARGET_DIR=target
+    just build-settings
+}
+
+package() {
+    cd "${_pkgname}"
+    just rootdir="${pkgdir}" prefix=/usr install-settings
+    install -Dm644 LICENSE.md "${pkgdir}/usr/share/licenses/${pkgname}/LICENSE"
+}

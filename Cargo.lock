@@ -1342,7 +1342,7 @@ dependencies = [
 
 [[package]]
 name = "cosmic-bg"
-version = "1.1.0"
+version = "1.2.0"
 dependencies = [
  "bytemuck",
  "clap",
@@ -1372,7 +1372,7 @@ dependencies = [
 
 [[package]]
 name = "cosmic-bg-config"
-version = "0.2.0"
+version = "0.3.0"
 dependencies = [
  "cosmic-config",
  "derive_setters",
@@ -1383,7 +1383,7 @@ dependencies = [
 
 [[package]]
 name = "cosmic-bg-settings"
-version = "1.0.0"
+version = "1.1.0"
 dependencies = [
  "anyhow",
  "ashpd 0.10.3",
