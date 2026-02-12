@@ -8,7 +8,7 @@
 
 #![allow(dead_code)]
 
-use cosmic_bg_config::Color;
+use cosmic_ext_bg_config::Color;
 use image::DynamicImage;
 use std::{
     fs::File,

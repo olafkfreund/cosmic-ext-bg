@@ -2,7 +2,7 @@
 
 ## Overview
 
-cosmic-bg-ng supports GPU-accelerated procedural wallpapers using wgpu and WGSL shaders. This feature enables real-time animated backgrounds with minimal CPU overhead, rendering directly on the GPU and supporting both built-in presets and custom shader files.
+cosmic-ext-bg supports GPU-accelerated procedural wallpapers using wgpu and WGSL shaders. This feature enables real-time animated backgrounds with minimal CPU overhead, rendering directly on the GPU and supporting both built-in presets and custom shader files.
 
 **Key Benefits:**
 - Low CPU usage (< 2% GPU utilization)
@@ -28,7 +28,7 @@ let instance = wgpu::Instance::new(wgpu::InstanceDescriptor {
 ```
 
 #### **wgpu::Adapter**
-Represents a physical GPU device. cosmic-bg-ng requests a LowPower adapter for battery efficiency:
+Represents a physical GPU device. cosmic-ext-bg requests a LowPower adapter for battery efficiency:
 
 ```rust
 let adapter = instance.request_adapter(&wgpu::RequestAdapterOptions {
@@ -139,7 +139,7 @@ pub struct ShaderSource {
 
 ## WallpaperSource Implementation
 
-ShaderSource implements the `WallpaperSource` trait to integrate with cosmic-bg-ng's wallpaper system.
+ShaderSource implements the `WallpaperSource` trait to integrate with cosmic-ext-bg's wallpaper system.
 
 ### prepare()
 
@@ -853,7 +853,7 @@ ShaderConfig(
 - Avoid branches in fragment shaders
 - Leverage GPU's parallel processing
 
-## Integration with cosmic-bg-ng
+## Integration with cosmic-ext-bg
 
 ### Source Enum Integration
 

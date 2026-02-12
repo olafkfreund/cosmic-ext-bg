@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: MPL-2.0
 
-//! cosmic-bg-ctl - CLI tool for managing cosmic-bg wallpapers
+//! cosmic-ext-bg-ctl - CLI tool for managing cosmic-ext-bg wallpapers
 //!
 //! This tool allows setting wallpapers from the command line, including
 //! static images, videos, animated images, and GPU shaders.
@@ -10,14 +10,14 @@ use std::path::PathBuf;
 
 use clap::{CommandFactory, Parser, Subcommand};
 use clap_complete::{generate, Shell};
-use cosmic_bg_config::{
+use cosmic_ext_bg_config::{
     AnimatedConfig, Color, Context, Entry, Gradient, ScalingMode, ShaderConfig, ShaderPreset,
     Source, VideoConfig,
 };
 
-/// CLI tool for managing cosmic-bg wallpapers
+/// CLI tool for managing cosmic-ext-bg wallpapers
 #[derive(Parser)]
-#[command(name = "cosmic-bg-ctl")]
+#[command(name = "cosmic-ext-bg-ctl")]
 #[command(author, version, about, long_about = None)]
 struct Cli {
     #[command(subcommand)]
@@ -147,7 +147,7 @@ fn main() {
 }
 
 fn run(cli: Cli) -> Result<(), Box<dyn std::error::Error>> {
-    let context = cosmic_bg_config::context()?;
+    let context = cosmic_ext_bg_config::context()?;
 
     match cli.command {
         Commands::Set {
@@ -232,7 +232,7 @@ fn cmd_set(
         entry.rotation_frequency = freq;
     }
 
-    let mut config = cosmic_bg_config::Config::load(context)?;
+    let mut config = cosmic_ext_bg_config::Config::load(context)?;
     config.set_entry(context, entry)?;
 
     println!("Set wallpaper for '{output_name}': {}", path.display());
@@ -264,7 +264,7 @@ fn cmd_video(
 
     let entry = Entry::new(output_name.clone(), Source::Video(video_config));
 
-    let mut config = cosmic_bg_config::Config::load(context)?;
+    let mut config = cosmic_ext_bg_config::Config::load(context)?;
     config.set_entry(context, entry)?;
 
     println!("Set video wallpaper for '{output_name}': {}", path.display());
@@ -303,7 +303,7 @@ fn cmd_animated(
 
     let entry = Entry::new(output_name.clone(), Source::Animated(animated_config));
 
-    let mut config = cosmic_bg_config::Config::load(context)?;
+    let mut config = cosmic_ext_bg_config::Config::load(context)?;
     config.set_entry(context, entry)?;
 
     println!(
@@ -363,7 +363,7 @@ fn cmd_shader(
 
     let entry = Entry::new(output_name.clone(), Source::Shader(shader_config.clone()));
 
-    let mut config = cosmic_bg_config::Config::load(context)?;
+    let mut config = cosmic_ext_bg_config::Config::load(context)?;
     config.set_entry(context, entry)?;
 
     if let Some(preset) = &shader_config.preset {
@@ -407,7 +407,7 @@ fn cmd_color(
 
     let entry = Entry::new(output_name.clone(), source.clone());
 
-    let mut config = cosmic_bg_config::Config::load(context)?;
+    let mut config = cosmic_ext_bg_config::Config::load(context)?;
     config.set_entry(context, entry)?;
 
     match source {
@@ -437,7 +437,7 @@ fn cmd_color(
 }
 
 fn cmd_query(context: &Context, output: Option<String>) -> Result<(), Box<dyn std::error::Error>> {
-    let config = cosmic_bg_config::Config::load(context)?;
+    let config = cosmic_ext_bg_config::Config::load(context)?;
 
     println!("Wallpaper Configuration");
     println!("=======================");
@@ -523,7 +523,7 @@ fn print_entry(entry: &Entry) {
 }
 
 fn cmd_outputs(context: &Context) -> Result<(), Box<dyn std::error::Error>> {
-    let config = cosmic_bg_config::Config::load(context)?;
+    let config = cosmic_ext_bg_config::Config::load(context)?;
 
     println!("Configured outputs:");
     println!("  all (default)");
@@ -532,7 +532,7 @@ fn cmd_outputs(context: &Context) -> Result<(), Box<dyn std::error::Error>> {
         println!("  {output}");
     }
 
-    println!("\nNote: To see all connected displays, run cosmic-bg with debug logging.");
+    println!("\nNote: To see all connected displays, run cosmic-ext-bg with debug logging.");
     Ok(())
 }
 
@@ -540,11 +540,11 @@ fn cmd_backup(
     context: &Context,
     file: Option<PathBuf>,
 ) -> Result<(), Box<dyn std::error::Error>> {
-    let config = cosmic_bg_config::Config::load(context)?;
+    let config = cosmic_ext_bg_config::Config::load(context)?;
 
     let backup_file = file.unwrap_or_else(|| {
         let home = std::env::var("HOME").unwrap_or_else(|_| ".".to_string());
-        PathBuf::from(home).join(".config/cosmic-bg-backup.ron")
+        PathBuf::from(home).join(".config/cosmic-ext-bg-backup.ron")
     });
 
     let ron_str = ron::ser::to_string_pretty(&config.backgrounds, ron::ser::PrettyConfig::default())?;
@@ -578,7 +578,7 @@ fn cmd_completions(shell: &str) -> Result<(), Box<dyn std::error::Error>> {
     };
 
     let mut cmd = Cli::command();
-    generate(shell, &mut cmd, "cosmic-bg-ctl", &mut io::stdout());
+    generate(shell, &mut cmd, "cosmic-ext-bg-ctl", &mut io::stdout());
     Ok(())
 }
 
@@ -588,7 +588,7 @@ fn cmd_restore(
 ) -> Result<(), Box<dyn std::error::Error>> {
     let backup_file = file.unwrap_or_else(|| {
         let home = std::env::var("HOME").unwrap_or_else(|_| ".".to_string());
-        PathBuf::from(home).join(".config/cosmic-bg-backup.ron")
+        PathBuf::from(home).join(".config/cosmic-ext-bg-backup.ron")
     });
 
     if !backup_file.exists() {
@@ -608,7 +608,7 @@ fn cmd_restore(
     let ron_str = std::fs::read_to_string(&backup_file)?;
     let backgrounds: Vec<Entry> = ron::from_str(&ron_str)?;
 
-    let mut config = cosmic_bg_config::Config::load(context)?;
+    let mut config = cosmic_ext_bg_config::Config::load(context)?;
 
     for entry in backgrounds {
         config.set_entry(context, entry)?;

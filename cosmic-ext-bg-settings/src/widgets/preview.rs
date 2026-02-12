@@ -5,7 +5,7 @@
 use cosmic::iced::Length;
 use cosmic::widget::{column, container, text};
 use cosmic::Element;
-use cosmic_bg_config::{Color, Source};
+use cosmic_ext_bg_config::{Color, Source};
 
 use crate::message::Message;
 

@@ -14,7 +14,7 @@ Comment[pl]=Konfiguruj tapety i tła pulpitu
 Comment[ru]=Настройка обоев и фонов рабочего стола
 Comment[sv]=Konfigurera skrivbordsbakgrunder
 Type=Application
-Exec=cosmic-bg-settings
+Exec=cosmic-ext-bg-settings
 Terminal=false
 Categories=Settings;DesktopSettings;COSMIC;
 # Translators: Search terms to find this application. Do NOT translate or localize the semicolons! The list MUST also end with a semicolon!
@@ -26,5 +26,5 @@ Keywords[pl]=tapeta;tło;pulpit;ustawienia;motyw;
 Keywords[ru]=обои;фон;рабочий стол;настройки;тема;
 Keywords[sv]=bakgrund;tapet;skrivbord;inställningar;tema;
 # Translators: Do NOT translate or transliterate this text (this is an icon file name)!
-Icon=com.system76.CosmicBackground
+Icon=io.github.olafkfreund.CosmicExtBg
 StartupNotify=true

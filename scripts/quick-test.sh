@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # SPDX-License-Identifier: MPL-2.0
 #
-# Quick verification script for cosmic-bg-ng
+# Quick verification script for cosmic-ext-bg
 # Runs cargo tests and basic runtime checks
 
 set -euo pipefail
@@ -17,7 +17,7 @@ BLUE='\033[0;34m'
 NC='\033[0m'
 
 echo -e "${BLUE}═══════════════════════════════════════════════════════════${NC}"
-echo -e "${BLUE}  cosmic-bg-ng Quick Test${NC}"
+echo -e "${BLUE}  cosmic-ext-bg Quick Test${NC}"
 echo -e "${BLUE}═══════════════════════════════════════════════════════════${NC}"
 echo ""
 
@@ -117,7 +117,7 @@ echo -e "${GREEN}✓ Runtime environment checked${NC}"
 #------------------------------------------------------------------------------
 echo -e "${YELLOW}[5/5] Checking configuration...${NC}"
 
-CONFIG_DIR="${XDG_CONFIG_HOME:-$HOME/.config}/cosmic/com.system76.CosmicBackground/v1"
+CONFIG_DIR="${XDG_CONFIG_HOME:-$HOME/.config}/cosmic/io.github.olafkfreund.CosmicExtBg/v1"
 
 if [ -d "$CONFIG_DIR" ]; then
     echo -e "  ${GREEN}✓ Config directory exists: $CONFIG_DIR${NC}"

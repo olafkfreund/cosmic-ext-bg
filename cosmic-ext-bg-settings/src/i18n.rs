@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: MPL-2.0
 
-//! Internationalization support for cosmic-bg-settings
+//! Internationalization support for cosmic-ext-bg-settings
 
 use i18n_embed::{
     fluent::{fluent_language_loader, FluentLanguageLoader},

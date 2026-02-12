@@ -1,5 +1,5 @@
 [package]
-name = "cosmic-bg-config"
+name = "cosmic-ext-bg-config"
 version = "0.3.0"
 edition = "2024"
 

@@ -1,8 +1,8 @@
-# cosmic-bg-ng: Complete Implementation Summary
+# cosmic-ext-bg: Complete Implementation Summary
 
 ## Overview
 
-This document summarizes ALL changes made to cosmic-bg-ng across 13 major feature implementations. The project evolved from a basic static wallpaper service into a comprehensive animated wallpaper system supporting static images, colors, animated images, videos, and GPU shaders.
+This document summarizes ALL changes made to cosmic-ext-bg across 13 major feature implementations. The project evolved from a basic static wallpaper service into a comprehensive animated wallpaper system supporting static images, colors, animated images, videos, and GPU shaders.
 
 **Total Impact:**
 - 24 files changed

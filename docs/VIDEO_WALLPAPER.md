@@ -1,10 +1,10 @@
 # Video Wallpaper Support
 
-This document describes the video wallpaper feature implementation in cosmic-bg-ng.
+This document describes the video wallpaper feature implementation in cosmic-ext-bg.
 
 ## Feature Overview
 
-cosmic-bg-ng supports animated video wallpapers through GStreamer-based video playback. Videos are decoded, scaled, and rendered as desktop backgrounds with hardware acceleration support when available. The implementation provides:
+cosmic-ext-bg supports animated video wallpapers through GStreamer-based video playback. Videos are decoded, scaled, and rendered as desktop backgrounds with hardware acceleration support when available. The implementation provides:
 
 - **Continuous playback**: Videos loop seamlessly on the desktop
 - **Hardware acceleration**: Automatic detection and use of VA-API (Intel/AMD) or NVDEC (NVIDIA)
@@ -437,4 +437,4 @@ gst-inspect-1.0 | grep -i decode
 - [GStreamer Plugin Reference](https://gstreamer.freedesktop.org/documentation/plugins_doc.html)
 - [VA-API (Video Acceleration API)](https://github.com/intel/libva)
 - [NVDEC (NVIDIA Video Decoder)](https://developer.nvidia.com/nvidia-video-codec-sdk)
-- [cosmic-bg-ng Repository](https://github.com/cosmic-utils/cosmic-bg)
+- [cosmic-ext-bg Repository](https://github.com/cosmic-utils/cosmic-bg)

@@ -7,7 +7,7 @@ use std::path::PathBuf;
 use cosmic::iced::Length;
 use cosmic::widget::{button, column, container, dropdown, row, text, text_input, toggler};
 use cosmic::Element;
-use cosmic_bg_config::{
+use cosmic_ext_bg_config::{
     AnimatedConfig, Color, Entry, Gradient, ScalingMode, ShaderConfig, ShaderPreset, Source,
     VideoConfig,
 };
@@ -110,7 +110,7 @@ impl Default for WallpaperPage {
 
 impl WallpaperPage {
     /// Create a new wallpaper page with initial config
-    pub fn new(config: &cosmic_bg_config::Config) -> Self {
+    pub fn new(config: &cosmic_ext_bg_config::Config) -> Self {
         let mut page = Self::default();
         page.apply_to_all = config.same_on_all;
         page.load_from_entry(&config.default_background);

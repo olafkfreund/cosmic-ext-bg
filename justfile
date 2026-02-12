@@ -1,5 +1,5 @@
-name := 'cosmic-bg'
-export APPID := 'com.system76.CosmicBackground'
+name := 'cosmic-ext-bg'
+export APPID := 'io.github.olafkfreund.CosmicExtBg'
 
 # Use mold linker if clang and mold exists.
 clang-path := `which clang || true`
@@ -28,10 +28,10 @@ export INSTALL_DIR := base-dir / 'share'
 cargo-target-dir := env('CARGO_TARGET_DIR', 'target')
 bin-src := cargo-target-dir / 'release' / name
 bin-dst := base-dir / 'bin' / name
-ctl-src := cargo-target-dir / 'release' / 'cosmic-bg-ctl'
-ctl-dst := base-dir / 'bin' / 'cosmic-bg-ctl'
-settings-src := cargo-target-dir / 'release' / 'cosmic-bg-settings'
-settings-dst := base-dir / 'bin' / 'cosmic-bg-settings'
+ctl-src := cargo-target-dir / 'release' / 'cosmic-ext-bg-ctl'
+ctl-dst := base-dir / 'bin' / 'cosmic-ext-bg-ctl'
+settings-src := cargo-target-dir / 'release' / 'cosmic-ext-bg-settings'
+settings-dst := base-dir / 'bin' / 'cosmic-ext-bg-settings'
 
 # Default recipe which runs `just build-release`
 default: build-release
@@ -56,11 +56,11 @@ build-vendored *args: vendor-extract (build-release '--frozen --offline' args)
 
 # Build only the CLI tool
 build-ctl *args:
-    cargo build --release --bin cosmic-bg-ctl {{args}}
+    cargo build --release --bin cosmic-ext-bg-ctl {{args}}
 
 # Build only the settings GUI
 build-settings *args:
-    cargo build --release -p cosmic-bg-settings {{args}}
+    cargo build --release -p cosmic-ext-bg-settings {{args}}
 
 # Build all tools (service, CLI, and GUI)
 build-all *args: build-release build-settings
@@ -82,18 +82,18 @@ run *args:
 
 # Run the CLI tool
 run-ctl *args:
-    env RUST_LOG=debug cargo run --release --bin cosmic-bg-ctl -- {{args}}
+    env RUST_LOG=debug cargo run --release --bin cosmic-ext-bg-ctl -- {{args}}
 
-# Generate shell completions for cosmic-bg-ctl
+# Generate shell completions for cosmic-ext-bg-ctl
 completions:
-    cargo run --release --bin cosmic-bg-ctl -- completions bash > cosmic-bg-ctl.bash
-    cargo run --release --bin cosmic-bg-ctl -- completions zsh > _cosmic-bg-ctl
-    cargo run --release --bin cosmic-bg-ctl -- completions fish > cosmic-bg-ctl.fish
-    @echo "Generated completions: cosmic-bg-ctl.bash, _cosmic-bg-ctl, cosmic-bg-ctl.fish"
+    cargo run --release --bin cosmic-ext-bg-ctl -- completions bash > cosmic-ext-bg-ctl.bash
+    cargo run --release --bin cosmic-ext-bg-ctl -- completions zsh > _cosmic-ext-bg-ctl
+    cargo run --release --bin cosmic-ext-bg-ctl -- completions fish > cosmic-ext-bg-ctl.fish
+    @echo "Generated completions: cosmic-ext-bg-ctl.bash, _cosmic-ext-bg-ctl, cosmic-ext-bg-ctl.fish"
 
 # Run the settings GUI
 run-settings *args:
-    env RUST_LOG=debug cargo run --release -p cosmic-bg-settings {{args}}
+    env RUST_LOG=debug cargo run --release -p cosmic-ext-bg-settings {{args}}
 
 # Installs files
 install:
@@ -134,7 +134,7 @@ uninstall-all: uninstall uninstall-ctl uninstall-settings
 # Vendor dependencies locally
 vendor:
     mkdir -p .cargo
-    cargo vendor --sync Cargo.toml --sync config/Cargo.toml --sync cosmic-bg-settings/Cargo.toml | head -n -1 > .cargo/config.toml
+    cargo vendor --sync Cargo.toml --sync config/Cargo.toml --sync cosmic-ext-bg-settings/Cargo.toml | head -n -1 > .cargo/config.toml
     echo 'directory = "vendor"' >> .cargo/config.toml
     tar pcf vendor.tar vendor
     rm -rf vendor

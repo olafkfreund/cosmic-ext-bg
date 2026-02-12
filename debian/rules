@@ -1,6 +1,6 @@
 #!/usr/bin/make -f
 
-DESTDIR = debian/cosmic-bg
+DESTDIR = debian/cosmic-ext-bg
 CLEAN ?= 1
 VENDOR ?= 1
 

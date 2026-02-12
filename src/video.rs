@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MPL-2.0
 
 use crate::source::{Frame, SourceError, WallpaperSource};
-use cosmic_bg_config::VideoConfig;
+use cosmic_ext_bg_config::VideoConfig;
 use gstreamer as gst;
 use gstreamer::prelude::*;
 use gstreamer_app as gst_app;
