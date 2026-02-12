@@ -86,7 +86,7 @@
         # Main cosmic-bg package definition
         pkgDef = {
           pname = "cosmic-bg-ng";
-          version = "1.1.0";
+          version = "1.2.0";
           inherit src;
           nativeBuildInputs = commonNativeBuildInputs;
           buildInputs = commonBuildInputs;

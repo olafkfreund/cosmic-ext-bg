@@ -1,3 +1,13 @@
+cosmic-bg (1.2.0) UNRELEASED; urgency=medium
+
+  * Add AUR packaging support
+  * Comprehensive code review fixes (security, robustness, performance)
+  * Fix devShell toolchain mismatch (fenix clippy/rustfmt)
+  * Add named constants and shared error helpers
+  * Optimize solid color and gradient generation
+
+ -- Olaf K. Freund <olaf@olafkfreund.com>  Wed, 12 Feb 2026 09:00:00 +0000
+
 cosmic-bg (0.1.0) UNRELEASED; urgency=medium
 
   * Initial release.
