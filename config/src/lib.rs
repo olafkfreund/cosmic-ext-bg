@@ -152,6 +152,12 @@ impl ShaderConfig {
         (self.preset.is_some() && self.custom_path.is_none())
             || (self.preset.is_none() && self.custom_path.is_some())
     }
+
+    /// Returns fps_limit clamped to a safe range (1..=240).
+    #[must_use]
+    pub fn clamped_fps(&self) -> u32 {
+        self.fps_limit.clamp(1, 240)
+    }
 }
 
 /// Video background configuration
@@ -180,6 +186,18 @@ fn default_playback_speed() -> f64 {
 
 fn default_hw_accel() -> bool {
     true
+}
+
+impl VideoConfig {
+    /// Returns playback_speed clamped to a safe range (0.1..=10.0).
+    #[must_use]
+    pub fn clamped_speed(&self) -> f64 {
+        if self.playback_speed.is_finite() {
+            self.playback_speed.clamp(0.1, 10.0)
+        } else {
+            1.0
+        }
+    }
 }
 
 impl Default for VideoConfig {

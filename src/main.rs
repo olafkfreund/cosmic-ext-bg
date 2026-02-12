@@ -20,6 +20,11 @@ mod malloc {
     use std::os::raw::c_int;
     const M_MMAP_THRESHOLD: c_int = -3;
 
+    /// 64 KiB — allocations above this size use mmap instead of brk/sbrk,
+    /// which allows the OS to reclaim memory immediately on free rather than
+    /// leaving it in the glibc arena (default threshold is 128 KiB).
+    const MMAP_THRESHOLD_BYTES: c_int = 65_536;
+
     unsafe extern "C" {
         fn malloc_trim(pad: usize);
         fn mallopt(param: c_int, value: c_int) -> c_int;
@@ -28,7 +33,7 @@ mod malloc {
     /// Prevents glibc from hoarding memory via memory fragmentation.
     pub fn limit_mmap_threshold() {
         unsafe {
-            mallopt(M_MMAP_THRESHOLD, 65536);
+            mallopt(M_MMAP_THRESHOLD, MMAP_THRESHOLD_BYTES);
         }
     }
 
@@ -130,6 +135,7 @@ fn main() -> color_eyre::Result<()> {
     color_eyre::install()?;
 
     if std::env::var("RUST_SPANTRACE").is_err() {
+        // SAFETY: Called before spawning any threads (single-threaded at this point in main).
         unsafe {
             std::env::set_var("RUST_SPANTRACE", "0");
         }
@@ -622,13 +628,21 @@ impl LayerShellHandler for CosmicBg {
                 w_layer.size = Some((w, h));
                 w_layer.needs_redraw = true;
 
+                let Some(buf_size) = (w as usize)
+                    .checked_mul(h as usize)
+                    .and_then(|s| s.checked_mul(4))
+                else {
+                    tracing::error!(w, h, "buffer size overflow");
+                    continue;
+                };
+
                 if let Some(pool) = w_layer.pool.as_mut() {
-                    if let Err(why) = pool.resize(w as usize * h as usize * 4) {
+                    if let Err(why) = pool.resize(buf_size) {
                         tracing::error!(?why, "failed to resize pool");
                         continue;
                     }
                 } else {
-                    match SlotPool::new(w as usize * h as usize * 4, &self.shm_state) {
+                    match SlotPool::new(buf_size, &self.shm_state) {
                         Ok(pool) => {
                             w_layer.pool.replace(pool);
                         }

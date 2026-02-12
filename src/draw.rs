@@ -75,6 +75,12 @@ pub fn layer_surface(
 
 /// Draws the image on a 10-bit canvas.
 pub fn xrgb21010_canvas(canvas: &mut [u8], image: &DynamicImage) {
+    debug_assert!(
+        canvas.len() >= image.width() as usize * image.height() as usize * 4,
+        "canvas too small: {} bytes for {}x{} image",
+        canvas.len(), image.width(), image.height()
+    );
+
     const BIT_MASK: u32 = (1 << 10) - 1;
 
     for (pos, pixel) in image.to_rgb16().pixels().enumerate() {
@@ -92,6 +98,12 @@ pub fn xrgb21010_canvas(canvas: &mut [u8], image: &DynamicImage) {
 
 /// Draws the image on an 8-bit canvas.
 pub fn xrgb888_canvas(canvas: &mut [u8], image: &DynamicImage) {
+    debug_assert!(
+        canvas.len() >= image.width() as usize * image.height() as usize * 4,
+        "canvas too small: {} bytes for {}x{} image",
+        canvas.len(), image.width(), image.height()
+    );
+
     for (pos, (_, _, pixel)) in image.pixels().enumerate() {
         let indice = pos * 4;
 

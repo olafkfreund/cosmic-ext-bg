@@ -1,19 +1,19 @@
 // SPDX-License-Identifier: MPL-2.0
 
 use crate::source::{Frame, SourceError, WallpaperSource};
+use cosmic_bg_config::VideoConfig;
 use gstreamer as gst;
 use gstreamer::prelude::*;
 use gstreamer_app as gst_app;
 use image::{DynamicImage, ImageBuffer, Rgba};
 use std::{
-    path::PathBuf,
     sync::{Arc, Mutex},
     time::{Duration, Instant},
 };
 
 /// Helper to convert GStreamer errors to SourceError
 fn gst_error(message: impl Into<String>) -> SourceError {
-    SourceError::Io(std::io::Error::new(std::io::ErrorKind::Other, message.into()))
+    SourceError::io(std::io::ErrorKind::Other, message)
 }
 
 /// Helper to create GStreamer elements
@@ -27,32 +27,6 @@ fn create_element(name: &str) -> Result<gst::Element, SourceError> {
 fn link_elements(elements: &[&gst::Element]) -> Result<(), SourceError> {
     gst::Element::link_many(elements)
         .map_err(|e| gst_error(format!("Failed to link elements: {}", e)))
-}
-
-/// Video playback configuration
-///
-/// Note: Audio is not supported for desktop wallpapers - only video frames are rendered.
-#[derive(Debug, Clone)]
-pub struct VideoConfig {
-    /// Path to the video file
-    pub path: PathBuf,
-    /// Whether to loop playback
-    pub loop_playback: bool,
-    /// Playback speed multiplier (1.0 = normal)
-    pub playback_speed: f64,
-    /// Whether to use hardware acceleration
-    pub hw_accel: bool,
-}
-
-impl Default for VideoConfig {
-    fn default() -> Self {
-        Self {
-            path: PathBuf::new(),
-            loop_playback: true,
-            playback_speed: 1.0,
-            hw_accel: true,
-        }
-    }
 }
 
 /// Video wallpaper source with GStreamer backend
@@ -80,7 +54,7 @@ impl VideoSource {
             appsink: None,
             current_frame: Arc::new(Mutex::new(None)),
             target_size: None,
-            frame_duration: Duration::from_millis(33), // Default to ~30fps
+            frame_duration: crate::source::DEFAULT_FRAME_DURATION,
             is_playing: false,
             is_prepared: false,
         })
@@ -161,8 +135,12 @@ impl VideoSource {
                 return;
             }
 
-            let caps = src_pad.current_caps().unwrap();
-            let structure = caps.structure(0).unwrap();
+            let Some(caps) = src_pad.current_caps() else {
+                return;
+            };
+            let Some(structure) = caps.structure(0) else {
+                return;
+            };
             let name = structure.name();
 
             if name.starts_with("video/") {
@@ -197,7 +175,9 @@ impl VideoSource {
                             map.as_slice().to_vec(),
                         ) {
                             let image = DynamicImage::ImageRgba8(img_buffer);
-                            *current_frame.lock().unwrap() = Some(image);
+                            if let Ok(mut frame) = current_frame.lock() {
+                                *frame = Some(image);
+                            }
                         }
                     }
 
@@ -210,11 +190,12 @@ impl VideoSource {
         self.pipeline = Some(pipeline.clone());
         self.appsink = Some(appsink);
 
-        // Set playback speed
-        if (self.config.playback_speed - 1.0).abs() > f64::EPSILON {
+        // Set playback speed (clamped to 0.1..=10.0)
+        let speed = self.config.clamped_speed();
+        if (speed - 1.0).abs() > f64::EPSILON {
             pipeline
                 .seek(
-                    self.config.playback_speed,
+                    speed,
                     gst::SeekFlags::FLUSH | gst::SeekFlags::ACCURATE,
                     gst::SeekType::Set,
                     gst::ClockTime::from_seconds(0),
@@ -321,7 +302,11 @@ impl WallpaperSource for VideoSource {
         self.check_eos()?;
 
         // Get current frame from buffer
-        let frame_opt = self.current_frame.lock().unwrap().clone();
+        let frame_opt = self
+            .current_frame
+            .lock()
+            .ok()
+            .and_then(|guard| guard.clone());
 
         if let Some(image) = frame_opt {
             Ok(Frame {
@@ -330,7 +315,7 @@ impl WallpaperSource for VideoSource {
             })
         } else {
             // No frame yet, return black frame
-            let (width, height) = self.target_size.unwrap_or((1920, 1080));
+            let (width, height) = self.target_size.unwrap_or(crate::source::FALLBACK_RESOLUTION);
             let black = ImageBuffer::from_pixel(width, height, Rgba([0, 0, 0, 255]));
             Ok(Frame {
                 image: DynamicImage::ImageRgba8(black),
@@ -400,6 +385,7 @@ impl Drop for VideoSource {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use std::path::PathBuf;
 
     #[test]
     fn test_video_config_defaults() {

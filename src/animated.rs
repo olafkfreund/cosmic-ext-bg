@@ -6,6 +6,7 @@
 //! respecting per-frame delay timings for smooth animation.
 
 use crate::source::{Frame, SourceError, WallpaperSource};
+use cosmic_bg_config::AnimatedConfig;
 use image::{codecs::gif::GifDecoder, AnimationDecoder, DynamicImage};
 use std::{
     collections::VecDeque,
@@ -15,30 +16,28 @@ use std::{
     time::{Duration, Instant},
 };
 
+/// Maximum number of frames to load from an animated image to prevent OOM.
+/// A 1080p RGBA frame is ~8MB, so 10,000 frames would be ~80GB -- far too much.
+/// 5,000 frames at 1080p = ~40GB max, but in practice most GIFs are much smaller per frame.
+const MAX_ANIMATED_FRAMES: usize = 5_000;
+
+/// Minimum frame delay in milliseconds. GIF encoders often set 0 ms or very
+/// low delays; browsers historically clamp to 10 ms to prevent CPU spin.
+const MIN_FRAME_DELAY_MS: u64 = 10;
+
 /// Helper to create decode errors with context
 fn decode_error(context: &str, err: impl std::fmt::Display) -> SourceError {
-    SourceError::Io(std::io::Error::new(
+    SourceError::io(
         std::io::ErrorKind::InvalidData,
         format!("{}: {}", context, err),
-    ))
+    )
 }
 
 /// Helper to calculate frame delay from image::Delay
 fn calculate_frame_delay(delay: image::Delay) -> Duration {
     let (numerator, denominator) = delay.numer_denom_ms();
-    let delay_ms = ((numerator as f64 / denominator as f64) as u64).max(10);
+    let delay_ms = ((numerator as f64 / denominator as f64) as u64).max(MIN_FRAME_DELAY_MS);
     Duration::from_millis(delay_ms)
-}
-
-/// Configuration for animated image wallpapers
-#[derive(Debug, Clone)]
-pub struct AnimatedConfig {
-    /// Path to the animated image file
-    pub path: PathBuf,
-    /// Optional FPS limit to reduce CPU usage
-    pub fps_limit: Option<u32>,
-    /// Number of times to loop (None = infinite)
-    pub loop_count: Option<u32>,
 }
 
 /// A single frame from an animated image
@@ -140,6 +139,15 @@ impl AnimatedSource {
             .map_err(|e| decode_error("Failed to decode GIF", e))?;
 
         for frame_result in decoder.into_frames() {
+            if self.frames.len() >= MAX_ANIMATED_FRAMES {
+                tracing::warn!(
+                    path = ?self.config.path,
+                    limit = MAX_ANIMATED_FRAMES,
+                    "Frame limit reached, truncating animated image"
+                );
+                break;
+            }
+
             let frame = frame_result
                 .map_err(|e| decode_error("Failed to decode GIF frame", e))?;
 
@@ -181,6 +189,15 @@ impl AnimatedSource {
             .map_err(|e| decode_error("Failed to create APNG decoder", e))?;
 
         for frame_result in apng_decoder.into_frames() {
+            if self.frames.len() >= MAX_ANIMATED_FRAMES {
+                tracing::warn!(
+                    path = ?self.config.path,
+                    limit = MAX_ANIMATED_FRAMES,
+                    "Frame limit reached, truncating animated image"
+                );
+                break;
+            }
+
             let frame = frame_result
                 .map_err(|e| decode_error("Failed to decode APNG frame", e))?;
 
@@ -219,6 +236,15 @@ impl AnimatedSource {
 
         // Load WebP frames
         for frame_result in decoder.into_frames() {
+            if self.frames.len() >= MAX_ANIMATED_FRAMES {
+                tracing::warn!(
+                    path = ?self.config.path,
+                    limit = MAX_ANIMATED_FRAMES,
+                    "Frame limit reached, truncating animated image"
+                );
+                break;
+            }
+
             let frame = frame_result
                 .map_err(|e| decode_error("Failed to decode WebP frame", e))?;
 

@@ -548,7 +548,15 @@ fn cmd_backup(
     });
 
     let ron_str = ron::ser::to_string_pretty(&config.backgrounds, ron::ser::PrettyConfig::default())?;
-    std::fs::write(&backup_file, ron_str)?;
+    std::fs::write(&backup_file, &ron_str)?;
+
+    // Set restrictive permissions (owner read/write only)
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::PermissionsExt;
+        let perms = std::fs::Permissions::from_mode(0o600);
+        std::fs::set_permissions(&backup_file, perms)?;
+    }
 
     println!("Configuration backed up to: {}", backup_file.display());
     Ok(())
@@ -585,6 +593,16 @@ fn cmd_restore(
 
     if !backup_file.exists() {
         return Err(format!("Backup file not found: {}", backup_file.display()).into());
+    }
+
+    // Limit restore file size to 1 MB to prevent resource exhaustion
+    let metadata = std::fs::metadata(&backup_file)?;
+    if metadata.len() > 1024 * 1024 {
+        return Err(format!(
+            "Backup file too large: {} bytes (max 1 MB)",
+            metadata.len()
+        )
+        .into());
     }
 
     let ron_str = std::fs::read_to_string(&backup_file)?;

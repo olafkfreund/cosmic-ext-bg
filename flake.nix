@@ -165,12 +165,13 @@
         devShells.default = pkgs.mkShell rec {
           inputsFrom = builtins.attrValues self.checks.${system};
 
-          nativeBuildInputs = with pkgs; [
-            just
-            pkg-config
-            rust-analyzer
-            clippy
-            rustfmt
+          nativeBuildInputs = [
+            pkgs.just
+            pkgs.pkg-config
+            # Use fenix toolchain components so clippy/rustfmt match the nightly rustc
+            fenix.packages.${system}.latest.rust-analyzer
+            fenix.packages.${system}.latest.clippy
+            fenix.packages.${system}.latest.rustfmt
           ];
 
           LD_LIBRARY_PATH = pkgs.lib.strings.makeLibraryPath (
