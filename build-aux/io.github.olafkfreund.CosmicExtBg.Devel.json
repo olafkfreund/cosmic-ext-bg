@@ -1,10 +1,10 @@
 {
-    "app-id": "com.system76.CosmicBackground.Devel",
+    "app-id": "io.github.olafkfreund.CosmicExtBg.Devel",
     "runtime": "org.gnome.Platform",
     "runtime-version": "42",
     "sdk": "org.gnome.Sdk",
     "sdk-extensions": ["org.freedesktop.Sdk.Extension.rust-stable"],
-    "command": "cosmic-bg",
+    "command": "cosmic-ext-bg",
     "finish-args" : [
         "--socket=wayland",
         "--talk-name=org.gtk.vfs.*",
@@ -28,7 +28,7 @@
     },
     "modules": [
         {
-            "name": "cosmic-bg",
+            "name": "cosmic-ext-bg",
             "buildsystem": "meson",
             "run-tests": true,
             "config-opts": ["-Dvendor=false"],

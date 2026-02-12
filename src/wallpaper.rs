@@ -13,7 +13,7 @@ use std::{
     time::{Duration, Instant},
 };
 
-use cosmic_bg_config::{Color, Entry, SamplingMethod, ScalingMode, Source, state::State};
+use cosmic_ext_bg_config::{Color, Entry, SamplingMethod, ScalingMode, Source, state::State};
 use cosmic_config::CosmicConfigEntry;
 use eyre::eyre;
 use image::{DynamicImage, ImageReader};
@@ -364,7 +364,7 @@ impl Wallpaper {
 
     fn generate_gradient(
         &self,
-        gradient: &cosmic_bg_config::Gradient,
+        gradient: &cosmic_ext_bg_config::Gradient,
         width: u32,
         height: u32,
     ) -> Result<DynamicImage, DrawError> {

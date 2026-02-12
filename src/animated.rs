@@ -6,7 +6,7 @@
 //! respecting per-frame delay timings for smooth animation.
 
 use crate::source::{Frame, SourceError, WallpaperSource};
-use cosmic_bg_config::AnimatedConfig;
+use cosmic_ext_bg_config::AnimatedConfig;
 use image::{codecs::gif::GifDecoder, AnimationDecoder, DynamicImage};
 use std::{
     collections::VecDeque,

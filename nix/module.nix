@@ -3,22 +3,22 @@
 with lib;
 
 let
-  cfg = config.services.cosmic-bg-ng;
+  cfg = config.services.cosmic-ext-bg;
 in
 {
-  options.services.cosmic-bg-ng = {
-    enable = mkEnableOption "COSMIC Background NG daemon as a replacement for the default COSMIC background service";
+  options.services.cosmic-ext-bg = {
+    enable = mkEnableOption "COSMIC Extended Background daemon as a replacement for the default COSMIC background service";
 
-    package = mkPackageOption pkgs "cosmic-bg-ng" {
-      default = [ "cosmic-bg-ng" ];
-      example = literalExpression "pkgs.cosmic-bg-ng";
+    package = mkPackageOption pkgs "cosmic-ext-bg" {
+      default = [ "cosmic-ext-bg" ];
+      example = literalExpression "pkgs.cosmic-ext-bg";
     };
 
     replaceSystemPackage = mkOption {
       type = types.bool;
       default = true;
       description = ''
-        Replace the system cosmic-bg package with cosmic-bg-ng.
+        Replace the system cosmic-bg package with cosmic-ext-bg.
 
         This creates an overlay that substitutes the default COSMIC background
         daemon with this enhanced version across the entire system.
@@ -81,19 +81,19 @@ in
     assertions = [
       {
         assertion = cfg.settings.maxCacheSize > 0;
-        message = "services.cosmic-bg-ng.settings.maxCacheSize must be positive";
+        message = "services.cosmic-ext-bg.settings.maxCacheSize must be positive";
       }
       {
         assertion = cfg.settings.maxCacheEntries > 0;
-        message = "services.cosmic-bg-ng.settings.maxCacheEntries must be positive";
+        message = "services.cosmic-ext-bg.settings.maxCacheEntries must be positive";
       }
     ];
 
     warnings = optional (!cfg.settings.enableVideoWallpapers && !cfg.settings.enableShaderWallpapers && !cfg.settings.enableAnimatedWallpapers) [
-      "All advanced wallpaper features are disabled in cosmic-bg-ng. Consider enabling at least one feature type."
+      "All advanced wallpaper features are disabled in cosmic-ext-bg. Consider enabling at least one feature type."
     ];
 
-    # Replace the system cosmic-bg package with cosmic-bg-ng
+    # Replace the system cosmic-bg package with cosmic-ext-bg
     nixpkgs.overlays = mkIf cfg.replaceSystemPackage [
       (final: prev: {
         cosmic-bg = cfg.package;

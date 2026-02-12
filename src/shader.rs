@@ -6,7 +6,7 @@
 //! using WGSL shaders. Includes built-in presets and custom shader support.
 
 use crate::source::{Frame, SourceError, WallpaperSource};
-use cosmic_bg_config::{ShaderConfig, ShaderPreset};
+use cosmic_ext_bg_config::{ShaderConfig, ShaderPreset};
 use image::{DynamicImage, ImageBuffer, Rgba};
 use std::{
     path::Path,
@@ -167,7 +167,7 @@ impl ShaderSource {
 
         let (device, queue) = pollster::block_on(adapter.request_device(
             &wgpu::DeviceDescriptor {
-                label: Some("cosmic-bg shader device"),
+                label: Some("cosmic-ext-bg shader device"),
                 required_features: wgpu::Features::empty(),
                 required_limits: limits,
                 memory_hints: wgpu::MemoryHints::Performance,
@@ -178,7 +178,7 @@ impl ShaderSource {
 
         // Create shader module
         let shader = device.create_shader_module(wgpu::ShaderModuleDescriptor {
-            label: Some("cosmic-bg shader"),
+            label: Some("cosmic-ext-bg shader"),
             source: wgpu::ShaderSource::Wgsl(self.shader_source.as_str().into()),
         });
 

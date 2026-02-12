@@ -1,13 +1,13 @@
 # Maintainer: Olaf K. Freund <olaf@olafkfreund.com>
-# https://github.com/olafkfreund/cosmic-bg-ng
+# https://github.com/olafkfreund/cosmic-ext-bg
 
-pkgname=cosmic-bg-ng-git
-_pkgname=cosmic-bg-ng
+pkgname=cosmic-ext-bg-git
+_pkgname=cosmic-ext-bg
 pkgver=1.2.0.r0.g0000000
 pkgrel=1
-pkgdesc='Next-generation background service for the COSMIC desktop with animated, video, and shader wallpaper support'
+pkgdesc='cosmic-ext-bg: background service for the COSMIC desktop with animated, video, and shader wallpaper support'
 arch=('x86_64' 'aarch64')
-url='https://github.com/olafkfreund/cosmic-bg-ng'
+url='https://github.com/olafkfreund/cosmic-ext-bg'
 license=('MPL-2.0')
 depends=(
     'wayland'
@@ -31,7 +31,7 @@ makedepends=(
 )
 optdepends=(
     'vulkan-driver: GPU shader wallpaper support'
-    'cosmic-bg-settings-git: GUI for managing wallpaper settings'
+    'cosmic-ext-bg-settings-git: GUI for managing wallpaper settings'
 )
 provides=("${_pkgname}" 'cosmic-bg')
 conflicts=('cosmic-bg' 'cosmic-bg-git')

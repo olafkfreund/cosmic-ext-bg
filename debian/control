@@ -1,4 +1,4 @@
-Source: cosmic-bg
+Source: cosmic-ext-bg
 Section: admin
 Priority: optional
 Maintainer: Ashley Wulber <ashley@system76.com>
@@ -13,11 +13,11 @@ Build-Depends:
   nasm,
   pkg-config,
 Standards-Version: 4.3.0
-Homepage: https://github.com/pop-os/cosmic-bg
+Homepage: https://github.com/olafkfreund/cosmic-ext-bg
 
-Package: cosmic-bg
+Package: cosmic-ext-bg
 Architecture: amd64 arm64
 Depends:
   ${misc:Depends},
   ${shlibs:Depends}
-Description: Cosmic Background
+Description: Cosmic Extended Background

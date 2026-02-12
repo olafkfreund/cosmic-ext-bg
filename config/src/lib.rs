@@ -7,12 +7,12 @@ use derive_setters::Setters;
 use serde::{Deserialize, Serialize};
 use std::{borrow::Cow, collections::HashSet, path::PathBuf};
 
-pub const NAME: &str = "com.system76.CosmicBackground";
+pub const NAME: &str = "io.github.olafkfreund.CosmicExtBg";
 pub const BACKGROUNDS: &str = "backgrounds";
 pub const DEFAULT_BACKGROUND: &str = "all";
 pub const SAME_ON_ALL: &str = "same-on-all";
 
-/// Create a context to the `cosmic-bg` config.
+/// Create a context to the `cosmic-ext-bg` config.
 ///
 /// # Errors
 ///

@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-cosmic-bg is a Wayland background service for the COSMIC Desktop Environment (System76). It renders wallpapers to display outputs using wlr-layer-shell protocol surfaces. The service supports static images, colors, gradients, per-display backgrounds, and slideshow rotation.
+cosmic-ext-bg is a Wayland background service for the COSMIC Desktop Environment (System76). It renders wallpapers to display outputs using wlr-layer-shell protocol surfaces. The service supports static images, colors, gradients, per-display backgrounds, and slideshow rotation.
 
 ## Build Commands
 
@@ -15,7 +15,7 @@ just
 # Build debug
 just build-debug
 
-# Run with debug logging (kill cosmic-bg first to prevent cosmic-session respawning it)
+# Run with debug logging (kill cosmic-ext-bg first to prevent cosmic-session respawning it)
 just run
 
 # Lint with pedantic clippy
@@ -25,7 +25,7 @@ just check
 sudo just install
 
 # Install with custom prefix (for packaging)
-just rootdir=debian/cosmic-bg prefix=/usr install
+just rootdir=debian/cosmic-ext-bg prefix=/usr install
 ```
 
 ## Nix Development
@@ -39,8 +39,8 @@ nix develop            # Enter dev shell with all dependencies
 
 ### Workspace Structure
 
-- **`cosmic-bg`** (main crate): Wayland client service using smithay-client-toolkit
-- **`cosmic-bg-config`** (config crate): Configuration types and cosmic-config integration
+- **`cosmic-ext-bg`** (main crate): Wayland client service using smithay-client-toolkit
+- **`cosmic-ext-bg-config`** (config crate): Configuration types and cosmic-config integration
 
 ### Core Components
 
@@ -87,7 +87,7 @@ nix develop            # Enter dev shell with all dependencies
 
 ## Configuration Path
 
-Config stored via cosmic-config at `com.system76.CosmicBackground` (version 1).
+Config stored via cosmic-config at `io.github.olafkfreund.CosmicExtBg` (version 1).
 
 ## License
 

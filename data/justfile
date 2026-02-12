@@ -4,7 +4,7 @@ install-dir := env_var('INSTALL_DIR')
 desktop-src := appid + '.desktop'
 desktop-dst := install-dir / 'applications' / desktop-src
 
-settings-desktop-src := 'com.system76.CosmicBgSettings.desktop'
+settings-desktop-src := 'io.github.olafkfreund.CosmicExtBgSettings.desktop'
 settings-desktop-dst := install-dir / 'applications' / settings-desktop-src
 
 metainfo-src := appid + '.metainfo.xml'

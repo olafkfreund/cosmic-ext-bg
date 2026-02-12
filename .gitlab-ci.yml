@@ -8,10 +8,10 @@ flatpak:
   tags:
     - flatpak
   variables:
-    BUNDLE: "cosmic-bg-nightly.flatpak"
-    MANIFEST_PATH: "build-aux/com.system76.CosmicBackground.Devel.json"
-    FLATPAK_MODULE: "cosmic-bg"
-    APP_ID: "com.system76.CosmicBackground.Devel"
+    BUNDLE: "cosmic-ext-bg-nightly.flatpak"
+    MANIFEST_PATH: "build-aux/io.github.olafkfreund.CosmicExtBg.Devel.json"
+    FLATPAK_MODULE: "cosmic-ext-bg"
+    APP_ID: "io.github.olafkfreund.CosmicExtBg.Devel"
     RUNTIME_REPO: "https://nightly.gnome.org/gnome-nightly.flatpakrepo"
   script:
     - >

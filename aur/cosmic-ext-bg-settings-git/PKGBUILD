@@ -1,16 +1,16 @@
 # Maintainer: Olaf K. Freund <olaf@olafkfreund.com>
-# https://github.com/olafkfreund/cosmic-bg-ng
+# https://github.com/olafkfreund/cosmic-ext-bg
 
-pkgname=cosmic-bg-settings-git
-_pkgname=cosmic-bg-ng
+pkgname=cosmic-ext-bg-settings-git
+_pkgname=cosmic-ext-bg
 pkgver=1.2.0.r0.g0000000
 pkgrel=1
-pkgdesc='GUI settings application for cosmic-bg-ng wallpaper service'
+pkgdesc='GUI settings application for cosmic-ext-bg wallpaper service'
 arch=('x86_64' 'aarch64')
-url='https://github.com/olafkfreund/cosmic-bg-ng'
+url='https://github.com/olafkfreund/cosmic-ext-bg'
 license=('MPL-2.0')
 depends=(
-    'cosmic-bg-ng-git'
+    'cosmic-ext-bg-git'
     'wayland'
     'libxkbcommon'
     'vulkan-icd-loader'
@@ -27,8 +27,8 @@ makedepends=(
     'clang'
     'mold'
 )
-provides=('cosmic-bg-settings')
-conflicts=('cosmic-bg-settings')
+provides=('cosmic-ext-bg-settings')
+conflicts=('cosmic-ext-bg-settings')
 source=("git+${url}.git")
 sha256sums=('SKIP')
 

@@ -1,8 +1,8 @@
-# cosmic-bg-ng
+# cosmic-ext-bg
 
-[![Release](https://img.shields.io/github/v/release/olafkfreund/cosmic-bg-ng)](https://github.com/olafkfreund/cosmic-bg-ng/releases)
+[![Release](https://img.shields.io/github/v/release/olafkfreund/cosmic-ext-bg)](https://github.com/olafkfreund/cosmic-ext-bg/releases)
 [![License: MPL-2.0](https://img.shields.io/badge/License-MPL--2.0-blue.svg)](https://choosealicense.com/licenses/mpl-2.0)
-[![AUR](https://img.shields.io/badge/AUR-cosmic--bg--ng--git-blue)](https://aur.archlinux.org/packages/cosmic-bg-ng-git)
+[![AUR](https://img.shields.io/badge/AUR-cosmic--ext--bg--git-blue)](https://aur.archlinux.org/packages/cosmic-ext-bg-git)
 
 A next-generation Wayland background service for the COSMIC Desktop Environment (System76). Drop-in replacement for `cosmic-bg` with support for static wallpapers, animated images, video playback, and GPU shader-based procedural backgrounds.
 
@@ -56,10 +56,10 @@ A next-generation Wayland background service for the COSMIC Desktop Environment 
 
 ```bash
 # Install service + CLI tool (replaces cosmic-bg)
-yay -S cosmic-bg-ng-git
+yay -S cosmic-ext-bg-git
 
 # Optional: GUI settings application
-yay -S cosmic-bg-settings-git
+yay -S cosmic-ext-bg-settings-git
 ```
 
 ### NixOS
@@ -67,14 +67,14 @@ yay -S cosmic-bg-settings-git
 ```nix
 # flake.nix
 {
-  inputs.cosmic-bg-ng.url = "github:olafkfreund/cosmic-bg-ng";
+  inputs.cosmic-ext-bg.url = "github:olafkfreund/cosmic-ext-bg";
 }
 
 # configuration.nix
 { inputs, ... }: {
-  imports = [ inputs.cosmic-bg-ng.nixosModules.default ];
+  imports = [ inputs.cosmic-ext-bg.nixosModules.default ];
 
-  services.cosmic-bg-ng = {
+  services.cosmic-ext-bg = {
     enable = true;
     replaceSystemPackage = true;  # Replaces cosmic-bg system-wide (default)
 
@@ -90,10 +90,10 @@ yay -S cosmic-bg-settings-git
 Or build directly:
 
 ```bash
-nix build                     # Build service + CLI
-nix build .#cosmic-bg-ctl     # CLI tool only
-nix build .#cosmic-bg-settings # GUI only
-nix develop                   # Enter dev shell with all dependencies
+nix build                       # Build service + CLI
+nix build .#cosmic-ext-bg-ctl     # CLI tool only
+nix build .#cosmic-ext-bg-settings # GUI only
+nix develop                     # Enter dev shell with all dependencies
 ```
 
 ### Debian/Ubuntu
@@ -123,7 +123,7 @@ just build-all
 sudo just install-all
 
 # Package installation (custom prefix)
-just rootdir=debian/cosmic-bg prefix=/usr install
+just rootdir=debian/cosmic-ext-bg prefix=/usr install
 ```
 
 ### Shell Completions
@@ -132,49 +132,49 @@ just rootdir=debian/cosmic-bg prefix=/usr install
 just completions
 
 # Or manually
-cosmic-bg-ctl completions bash > ~/.local/share/bash-completion/completions/cosmic-bg-ctl
-cosmic-bg-ctl completions zsh > ~/.zsh/completions/_cosmic-bg-ctl
-cosmic-bg-ctl completions fish > ~/.config/fish/completions/cosmic-bg-ctl.fish
+cosmic-ext-bg-ctl completions bash > ~/.local/share/bash-completion/completions/cosmic-ext-bg-ctl
+cosmic-ext-bg-ctl completions zsh > ~/.zsh/completions/_cosmic-ext-bg-ctl
+cosmic-ext-bg-ctl completions fish > ~/.config/fish/completions/cosmic-ext-bg-ctl.fish
 ```
 
 ## Tools
 
-### cosmic-bg-ctl (CLI)
+### cosmic-ext-bg-ctl (CLI)
 
 Command-line tool for managing wallpapers without editing config files directly.
 
 ```bash
 # Set a static wallpaper
-cosmic-bg-ctl set /path/to/image.png
-cosmic-bg-ctl set /path/to/wallpapers/ -r 300  # Slideshow, rotate every 5 min
+cosmic-ext-bg-ctl set /path/to/image.png
+cosmic-ext-bg-ctl set /path/to/wallpapers/ -r 300  # Slideshow, rotate every 5 min
 
 # Set a video wallpaper
-cosmic-bg-ctl video /path/to/video.mp4 --loop --speed 1.5
+cosmic-ext-bg-ctl video /path/to/video.mp4 --loop --speed 1.5
 
 # Set an animated wallpaper
-cosmic-bg-ctl animated /path/to/animation.gif --fps 30
+cosmic-ext-bg-ctl animated /path/to/animation.gif --fps 30
 
 # Set a GPU shader wallpaper
-cosmic-bg-ctl shader Plasma --fps 60
-cosmic-bg-ctl shader /path/to/custom.wgsl
+cosmic-ext-bg-ctl shader Plasma --fps 60
+cosmic-ext-bg-ctl shader /path/to/custom.wgsl
 
 # Set a solid color or gradient
-cosmic-bg-ctl color "#1a1b26"
-cosmic-bg-ctl color "#1a1b26" --gradient-colors "#24283b" "#414868" --radius 0.5
+cosmic-ext-bg-ctl color "#1a1b26"
+cosmic-ext-bg-ctl color "#1a1b26" --gradient-colors "#24283b" "#414868" --radius 0.5
 
 # Query current configuration
-cosmic-bg-ctl query
-cosmic-bg-ctl query -o DP-1
+cosmic-ext-bg-ctl query
+cosmic-ext-bg-ctl query -o DP-1
 
 # List configured outputs
-cosmic-bg-ctl outputs
+cosmic-ext-bg-ctl outputs
 
 # Backup and restore
-cosmic-bg-ctl backup -f ~/my-wallpaper-config.ron
-cosmic-bg-ctl restore -f ~/my-wallpaper-config.ron
+cosmic-ext-bg-ctl backup -f ~/my-wallpaper-config.ron
+cosmic-ext-bg-ctl restore -f ~/my-wallpaper-config.ron
 
 # Generate shell completions
-cosmic-bg-ctl completions bash
+cosmic-ext-bg-ctl completions bash
 ```
 
 #### Commands Reference
@@ -205,12 +205,12 @@ cosmic-bg-ctl completions bash
 | `--fps` | animated, shader | FPS limit |
 | `--loops` | animated | Loop count (omit for infinite) |
 
-### cosmic-bg-settings (GUI)
+### cosmic-ext-bg-settings (GUI)
 
 Graphical application for configuring wallpapers with live preview.
 
 ```bash
-cosmic-bg-settings
+cosmic-ext-bg-settings
 ```
 
 Features:
@@ -222,7 +222,7 @@ Features:
 
 ## Configuration
 
-Configuration is stored via cosmic-config at `com.system76.CosmicBackground` (version 1).
+Configuration is stored via cosmic-config at `io.github.olafkfreund.CosmicExtBg` (version 1).
 
 ### Static Wallpaper
 ```ron
@@ -318,7 +318,7 @@ Shaders must be `.wgsl` files under 64 KB.
 ## Architecture
 
 ```
-cosmic-bg-ng/
+cosmic-ext-bg/
 ├── src/
 │   ├── main.rs          # Event loop, Wayland handlers, config watching
 │   ├── wallpaper.rs     # Wallpaper state and rendering coordination
@@ -338,20 +338,20 @@ cosmic-bg-ng/
 │   │   ├── waves.wgsl
 │   │   └── gradient.wgsl
 │   └── bin/
-│       └── cosmic-bg-ctl.rs  # CLI tool
+│       └── cosmic-ext-bg-ctl.rs  # CLI tool
 ├── config/
 │   ├── lib.rs           # Configuration types (Entry, Source, ShaderConfig, VideoConfig)
 │   └── state.rs         # Persistent state for slideshow position
-├── cosmic-bg-settings/  # GUI application (libcosmic)
+├── cosmic-ext-bg-settings/  # GUI application (libcosmic)
 ├── aur/                 # Arch Linux AUR packages
-│   ├── cosmic-bg-ng-git/
-│   └── cosmic-bg-settings-git/
+│   ├── cosmic-ext-bg-git/
+│   └── cosmic-ext-bg-settings-git/
 ├── debian/              # Debian packaging
 ├── nix/
 │   └── module.nix       # NixOS module
 ├── data/
-│   ├── com.system76.CosmicBackground.desktop
-│   ├── com.system76.CosmicBgSettings.desktop
+│   ├── io.github.olafkfreund.CosmicExtBg.desktop
+│   ├── io.github.olafkfreund.CosmicExtBgSettings.desktop
 │   └── icons/
 └── flake.nix            # Nix flake (crane + fenix)
 ```
@@ -359,10 +359,10 @@ cosmic-bg-ng/
 ### Data Flow
 
 ```
-┌─────────────────┐     ┌──────────────────┐
-│ cosmic-bg-ctl   │     │ cosmic-bg-settings│
-│     (CLI)       │     │      (GUI)        │
-└────────┬────────┘     └────────┬─────────┘
+┌─────────────────┐     ┌──────────────────────┐
+│ cosmic-ext-bg-ctl│     │ cosmic-ext-bg-settings│
+│     (CLI)       │     │        (GUI)          │
+└────────┬────────┘     └────────┬─────────────┘
          │                       │
          └───────────┬───────────┘
                      ▼
@@ -394,16 +394,16 @@ cosmic-bg-ng/
 
 ```bash
 # Kill existing instance (cosmic-session will respawn it)
-pkill cosmic-bg
+pkill cosmic-ext-bg
 
 # Run with debug logging
-RUST_LOG=cosmic_bg=debug just run
+RUST_LOG=cosmic_ext_bg=debug just run
 
 # Trace-level for frame timing details
-RUST_LOG=cosmic_bg=trace just run
+RUST_LOG=cosmic_ext_bg=trace just run
 
 # Specific module debugging
-RUST_LOG=cosmic_bg::shader=trace,cosmic_bg::video=debug just run
+RUST_LOG=cosmic_ext_bg::shader=trace,cosmic_ext_bg::video=debug just run
 ```
 
 ## Integration Status
@@ -426,7 +426,7 @@ RUST_LOG=cosmic_bg::shader=trace,cosmic_bg::video=debug just run
 | Platform | Package | Status |
 |----------|---------|--------|
 | NixOS | Flake with NixOS module + overlay | Included |
-| Arch Linux | `cosmic-bg-ng-git`, `cosmic-bg-settings-git` (AUR) | Included |
+| Arch Linux | `cosmic-ext-bg-git`, `cosmic-ext-bg-settings-git` (AUR) | Included |
 | Debian/Ubuntu | `debian/` packaging | Included |
 
 ## License

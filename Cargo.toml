@@ -1,15 +1,15 @@
 [package]
-name = "cosmic-bg"
-version = "1.2.0"
+name = "cosmic-ext-bg"
+version = "1.3.0"
 edition = "2024"
 rust-version = "1.85"
 
 [[bin]]
-name = "cosmic-bg"
+name = "cosmic-ext-bg"
 path = "src/main.rs"
 
 [[bin]]
-name = "cosmic-bg-ctl"
+name = "cosmic-ext-bg-ctl"
 path = "src/bin/cosmic-bg-ctl.rs"
 
 [dependencies]
@@ -17,7 +17,7 @@ clap = { version = "4", features = ["derive"] }
 clap_complete = "4"
 color-eyre = "0.6.5"
 colorgrad = { workspace = true }
-cosmic-bg-config = { path = "./config" }
+cosmic-ext-bg-config = { path = "./config" }
 eyre = "0.6.12"
 fast_image_resize = { version = "5.1.4", features = ["image"] }
 gstreamer = { version = "0.23", features = ["v1_20"] }
@@ -39,7 +39,7 @@ bytemuck = { version = "1.21", features = ["derive"] }
 pollster = "0.4"
 
 [workspace]
-members = ["config", "cosmic-bg-settings"]
+members = ["config", "cosmic-ext-bg-settings"]
 
 [workspace.dependencies]
 colorgrad = "0.7.2"

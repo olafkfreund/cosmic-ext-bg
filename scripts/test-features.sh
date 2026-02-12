@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # SPDX-License-Identifier: MPL-2.0
 #
-# Comprehensive feature test script for cosmic-bg-ng
+# Comprehensive feature test script for cosmic-ext-bg
 # Tests: Static images, Animated images (GIF, WebP), Video, Shaders, Cache
 #
 # Usage: ./scripts/test-features.sh [--all|--static|--animated|--video|--shader|--cache]
@@ -17,8 +17,8 @@ CYAN='\033[0;36m'
 NC='\033[0m' # No Color
 
 # Test assets directory
-TEST_DIR="${XDG_RUNTIME_DIR:-/tmp}/cosmic-bg-ng-test"
-COSMIC_CONFIG_NAME="com.system76.CosmicBackground"
+TEST_DIR="${XDG_RUNTIME_DIR:-/tmp}/cosmic-ext-bg-test"
+COSMIC_CONFIG_NAME="io.github.olafkfreund.CosmicExtBg"
 LOG_FILE="${TEST_DIR}/test.log"
 
 # Track test results
@@ -215,7 +215,7 @@ cleanup_test_assets() {
 
     if [ -d "$TEST_DIR" ]; then
         # Keep the log file
-        mv "$LOG_FILE" "/tmp/cosmic-bg-ng-test-$(date +%Y%m%d-%H%M%S).log" 2>/dev/null || true
+        mv "$LOG_FILE" "/tmp/cosmic-ext-bg-test-$(date +%Y%m%d-%H%M%S).log" 2>/dev/null || true
         rm -rf "$TEST_DIR"
         log_info "Test assets cleaned up"
     fi
@@ -739,7 +739,7 @@ print_summary() {
 
 show_help() {
     cat << EOF
-cosmic-bg-ng Feature Test Suite
+cosmic-ext-bg Feature Test Suite
 
 Usage: $0 [OPTIONS]
 
@@ -761,7 +761,7 @@ Examples:
 
 Requirements:
     - Running COSMIC Desktop session
-    - cosmic-bg-ng installed and active
+    - cosmic-ext-bg installed and active
     - ImageMagick (optional, for generating test images)
     - GStreamer (optional, for video wallpaper tests)
     - Vulkan drivers (optional, for shader tests)
@@ -835,7 +835,7 @@ main() {
 
     echo -e "${CYAN}"
     echo "╔═══════════════════════════════════════════════════════════════╗"
-    echo "║       cosmic-bg-ng Feature Test Suite v1.0.0                 ║"
+    echo "║       cosmic-ext-bg Feature Test Suite v1.0.0                 ║"
     echo "╚═══════════════════════════════════════════════════════════════╝"
     echo -e "${NC}"
 

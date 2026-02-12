@@ -83,10 +83,10 @@
           autoPatchelfHook
         ];
 
-        # Main cosmic-bg package definition
+        # Main cosmic-ext-bg package definition
         pkgDef = {
-          pname = "cosmic-bg-ng";
-          version = "1.2.0";
+          pname = "cosmic-ext-bg";
+          version = "1.3.0";
           inherit src;
           nativeBuildInputs = commonNativeBuildInputs;
           buildInputs = commonBuildInputs;
@@ -95,17 +95,17 @@
 
         cargoArtifacts = craneLib.buildDepsOnly pkgDef;
 
-        # Build cosmic-bg (service) and cosmic-bg-ctl (CLI)
-        cosmic-bg-ng = craneLib.buildPackage (pkgDef // {
+        # Build cosmic-ext-bg (service) and cosmic-ext-bg-ctl (CLI)
+        cosmic-ext-bg = craneLib.buildPackage (pkgDef // {
           inherit cargoArtifacts;
           # Skip tests in sandbox - GStreamer/Wayland not available
           doCheck = false;
         });
 
-        # Build cosmic-bg-settings (GUI)
-        cosmic-bg-settings = craneLib.buildPackage (pkgDef // {
-          pname = "cosmic-bg-settings";
-          cargoExtraArgs = "-p cosmic-bg-settings";
+        # Build cosmic-ext-bg-settings (GUI)
+        cosmic-ext-bg-settings = craneLib.buildPackage (pkgDef // {
+          pname = "cosmic-ext-bg-settings";
+          cargoExtraArgs = "-p cosmic-ext-bg-settings";
           inherit cargoArtifacts;
           buildInputs = commonBuildInputs ++ guiBuildInputs;
           runtimeDependencies = commonRuntimeDeps ++ guiRuntimeDeps;
@@ -114,11 +114,11 @@
 
       in {
         checks = {
-          inherit cosmic-bg-ng cosmic-bg-settings;
+          inherit cosmic-ext-bg cosmic-ext-bg-settings;
         };
 
         packages = {
-          default = cosmic-bg-ng.overrideAttrs (oldAttrs: {
+          default = cosmic-ext-bg.overrideAttrs (oldAttrs: {
             buildPhase = ''
               just prefix=$out build-release
             '';
@@ -127,25 +127,25 @@
               just prefix=$out install-ctl
             '';
           });
-          cosmic-bg-ng = self.packages.${system}.default;
+          cosmic-ext-bg = self.packages.${system}.default;
 
           # CLI tool package
-          cosmic-bg-ctl = craneLib.buildPackage (pkgDef // {
-            pname = "cosmic-bg-ctl";
-            cargoExtraArgs = "--bin cosmic-bg-ctl";
+          cosmic-ext-bg-ctl = craneLib.buildPackage (pkgDef // {
+            pname = "cosmic-ext-bg-ctl";
+            cargoExtraArgs = "--bin cosmic-ext-bg-ctl";
             inherit cargoArtifacts;
             doCheck = false;
             installPhase = ''
               mkdir -p $out/bin
-              cp target/release/cosmic-bg-ctl $out/bin/
+              cp target/release/cosmic-ext-bg-ctl $out/bin/
             '';
           });
 
           # GUI settings application
-          cosmic-bg-settings = cosmic-bg-settings.overrideAttrs (oldAttrs: {
+          cosmic-ext-bg-settings = cosmic-ext-bg-settings.overrideAttrs (oldAttrs: {
             installPhase = ''
               mkdir -p $out/bin
-              cp target/release/cosmic-bg-settings $out/bin/
+              cp target/release/cosmic-ext-bg-settings $out/bin/
             '';
           });
         };
@@ -154,11 +154,11 @@
           default = flake-utils.lib.mkApp {
             drv = self.packages.${system}.default;
           };
-          cosmic-bg-ctl = flake-utils.lib.mkApp {
-            drv = self.packages.${system}.cosmic-bg-ctl;
+          cosmic-ext-bg-ctl = flake-utils.lib.mkApp {
+            drv = self.packages.${system}.cosmic-ext-bg-ctl;
           };
-          cosmic-bg-settings = flake-utils.lib.mkApp {
-            drv = self.packages.${system}.cosmic-bg-settings;
+          cosmic-ext-bg-settings = flake-utils.lib.mkApp {
+            drv = self.packages.${system}.cosmic-ext-bg-settings;
           };
         };
 
@@ -199,16 +199,16 @@
       # NixOS modules for system integration
       nixosModules = {
         default = import ./nix/module.nix;
-        cosmic-bg-ng = import ./nix/module.nix;
+        cosmic-ext-bg = import ./nix/module.nix;
       };
 
       # Overlays for package substitution
       overlays = {
         default = final: prev: {
           cosmic-bg = self.packages.${prev.system}.default;
-          cosmic-bg-ng = self.packages.${prev.system}.default;
-          cosmic-bg-ctl = self.packages.${prev.system}.cosmic-bg-ctl;
-          cosmic-bg-settings = self.packages.${prev.system}.cosmic-bg-settings;
+          cosmic-ext-bg = self.packages.${prev.system}.default;
+          cosmic-ext-bg-ctl = self.packages.${prev.system}.cosmic-ext-bg-ctl;
+          cosmic-ext-bg-settings = self.packages.${prev.system}.cosmic-ext-bg-settings;
         };
       };
     };

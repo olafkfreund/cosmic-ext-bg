@@ -1,10 +1,10 @@
 // SPDX-License-Identifier: MPL-2.0
 
-//! Application messages for cosmic-bg-settings
+//! Application messages for cosmic-ext-bg-settings
 
 use std::path::PathBuf;
 
-use cosmic_bg_config::{ScalingMode, ShaderPreset};
+use cosmic_ext_bg_config::{ScalingMode, ShaderPreset};
 
 /// Source type selection
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -40,7 +40,7 @@ impl std::fmt::Display for SourceType {
 #[derive(Debug, Clone)]
 pub enum Message {
     /// Configuration loaded from cosmic-config
-    ConfigLoaded(cosmic_bg_config::Config),
+    ConfigLoaded(cosmic_ext_bg_config::Config),
 
     /// Configuration changed externally
     ConfigChanged,

@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: MPL-2.0
 
-//! Main application struct and logic for cosmic-bg-settings
+//! Main application struct and logic for cosmic-ext-bg-settings
 
 use cosmic::app::Core;
 use cosmic::iced::Length;
@@ -15,14 +15,14 @@ use crate::pages::WallpaperPage;
 use crate::widgets::PreviewWidget;
 
 /// Application ID
-pub const APP_ID: &str = "com.system76.CosmicBgSettings";
+pub const APP_ID: &str = "io.github.olafkfreund.CosmicExtBgSettings";
 
 /// Main application state
 pub struct App {
     /// Core application state from libcosmic
     core: Core,
     /// Current configuration
-    config: Option<cosmic_bg_config::Config>,
+    config: Option<cosmic_ext_bg_config::Config>,
     /// Wallpaper page state
     wallpaper_page: WallpaperPage,
     /// Preview widget
@@ -246,6 +246,6 @@ fn create_file_filters(source_type: SourceType) -> Vec<FileFilter> {
 }
 
 /// Load configuration asynchronously
-fn load_config_async() -> cosmic_bg_config::Config {
+fn load_config_async() -> cosmic_ext_bg_config::Config {
     config::load_config().unwrap_or_default()
 }

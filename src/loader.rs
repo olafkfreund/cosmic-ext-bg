@@ -118,7 +118,7 @@ impl AsyncImageLoader {
         let (result_tx, result_rx) = mpsc::channel();
 
         let worker_handle = thread::Builder::new()
-            .name("cosmic-bg-loader".to_string())
+            .name("cosmic-ext-bg-loader".to_string())
             .spawn(move || {
                 Self::worker_thread(command_rx, result_tx);
             })

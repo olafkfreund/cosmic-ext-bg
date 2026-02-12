@@ -1,19 +1,19 @@
 // SPDX-License-Identifier: MPL-2.0
 
-//! Configuration management for cosmic-bg-settings
+//! Configuration management for cosmic-ext-bg-settings
 
-use cosmic_bg_config::{Context, Entry, Source};
+use cosmic_ext_bg_config::{Context, Entry, Source};
 
 /// Load the current configuration from cosmic-config
-pub fn load_config() -> Result<cosmic_bg_config::Config, cosmic_config::Error> {
-    let context = cosmic_bg_config::context()?;
-    cosmic_bg_config::Config::load(&context)
+pub fn load_config() -> Result<cosmic_ext_bg_config::Config, cosmic_config::Error> {
+    let context = cosmic_ext_bg_config::context()?;
+    cosmic_ext_bg_config::Config::load(&context)
 }
 
 /// Save an entry to cosmic-config
 pub fn save_entry(entry: Entry) -> Result<(), cosmic_config::Error> {
-    let context = cosmic_bg_config::context()?;
-    let mut config = cosmic_bg_config::Config::load(&context)?;
+    let context = cosmic_ext_bg_config::context()?;
+    let mut config = cosmic_ext_bg_config::Config::load(&context)?;
     config.set_entry(&context, entry)
 }
 
@@ -21,14 +21,14 @@ pub fn save_entry(entry: Entry) -> Result<(), cosmic_config::Error> {
 /// TODO: Will be used for advanced configuration operations
 #[allow(dead_code)]
 pub fn get_context() -> Result<Context, cosmic_config::Error> {
-    cosmic_bg_config::context()
+    cosmic_ext_bg_config::context()
 }
 
 /// Set whether all displays use the same wallpaper
 /// TODO: Will be used when implementing per-output vs all-outputs toggle UI
 #[allow(dead_code)]
 pub fn set_same_on_all(value: bool) -> Result<(), cosmic_config::Error> {
-    let context = cosmic_bg_config::context()?;
+    let context = cosmic_ext_bg_config::context()?;
     context.set_same_on_all(value)
 }
 
@@ -36,7 +36,7 @@ pub fn set_same_on_all(value: bool) -> Result<(), cosmic_config::Error> {
 /// TODO: Will be used when implementing output selection UI
 #[allow(dead_code)]
 pub fn get_default_entry() -> Result<Entry, cosmic_config::Error> {
-    let context = cosmic_bg_config::context()?;
+    let context = cosmic_ext_bg_config::context()?;
     Ok(context.default_background())
 }
 
@@ -44,7 +44,7 @@ pub fn get_default_entry() -> Result<Entry, cosmic_config::Error> {
 /// TODO: Will be used when implementing per-output configuration UI
 #[allow(dead_code)]
 pub fn get_entry(output: &str) -> Result<Option<Entry>, cosmic_config::Error> {
-    let context = cosmic_bg_config::context()?;
+    let context = cosmic_ext_bg_config::context()?;
     match context.entry(output) {
         Ok(entry) => Ok(Some(entry)),
         Err(_) => Ok(None),

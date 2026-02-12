@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: MPL-2.0
 
-//! cosmic-bg-settings - GUI application for managing COSMIC desktop wallpapers
+//! cosmic-ext-bg-settings - GUI application for managing COSMIC desktop wallpapers
 //!
 //! This application provides a graphical interface for configuring wallpapers,
 //! including static images, videos, animated images, and GPU shaders.
